@@ -74,6 +74,9 @@ describe('App', () => {
 
     fireEvent.click(screen.getByText('Parse'));
 
+    // Parse should now show inspector mode - switch to Output to see error
+    fireEvent.click(screen.getByText('Output'));
+
     // Should show error for empty message
     expect(screen.getByText('Error')).toBeInTheDocument();
     expect(screen.getByText('No message to parse')).toBeInTheDocument();

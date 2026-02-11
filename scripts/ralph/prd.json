@@ -104,7 +104,7 @@
       "title": "Translation panel UI with data loss warnings",
       "description": "Create src/components/TranslationPanel.tsx. Wire up the Translate button. Show a format selector (target format dropdown based on detected source). Display the translated message in the output editor with appropriate syntax highlighting (MT or XML). Show data loss warnings below the output: each warning shows field_path, category (Truncation, NoEquivalent, PrecisionLoss, etc.), and description. Use amber color for warnings. Show the translation direction (e.g., 'MT103 → pacs.008'). Add a 'Copy' button to copy the translated output. Add a 'Swap' button to swap input/output (put translated message back in input for reverse translation).",
       "priority": 15,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-016",

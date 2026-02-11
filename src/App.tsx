@@ -6,11 +6,12 @@ import StatusBar from './components/StatusBar';
 import { Editor } from './components/Editor';
 import { ValidationPanel } from './components/ValidationPanel';
 import { TranslationPanel } from './components/TranslationPanel';
+import { FieldInspector } from './components/FieldInspector';
 import { samples } from './samples/messages';
-import { MessageFormat } from './engine/types';
+import { MessageFormat, MessageType } from './engine/types';
 import { useEngine } from './hooks/useEngine';
 
-type OutputMode = 'editor' | 'validation' | 'translation';
+type OutputMode = 'editor' | 'validation' | 'translation' | 'inspector';
 
 function App() {
   const engine = useEngine();
@@ -52,7 +53,7 @@ function App() {
 
   const handleParse = useCallback(() => {
     engine.parse();
-    setOutputMode('editor');
+    setOutputMode('inspector');
   }, [engine]);
 
   const handleValidate = useCallback(() => {
@@ -145,13 +146,63 @@ function App() {
         </div>
 
         <div className="flex flex-col">
-          <div className="border-b border-zinc-800 px-4 py-2 bg-zinc-900">
-            <span className="text-sm font-medium text-zinc-300">
-              {outputMode === 'validation' ? 'Validation' : outputMode === 'translation' ? 'Translation' : 'Output'}
-            </span>
+          <div className="border-b border-zinc-800 bg-zinc-900 flex">
+            <button
+              onClick={() => {
+                setOutputMode('inspector');
+              }}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                outputMode === 'inspector'
+                  ? 'text-cyan-400 border-cyan-400'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300'
+              }`}
+            >
+              Inspector
+            </button>
+            <button
+              onClick={() => {
+                setOutputMode('editor');
+              }}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                outputMode === 'editor'
+                  ? 'text-cyan-400 border-cyan-400'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300'
+              }`}
+            >
+              Output
+            </button>
+            <button
+              onClick={() => {
+                setOutputMode('validation');
+              }}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                outputMode === 'validation'
+                  ? 'text-cyan-400 border-cyan-400'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300'
+              }`}
+            >
+              Validation
+            </button>
+            <button
+              onClick={() => {
+                setOutputMode('translation');
+              }}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                outputMode === 'translation'
+                  ? 'text-cyan-400 border-cyan-400'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300'
+              }`}
+            >
+              Translation
+            </button>
           </div>
           <div className="flex-1 overflow-hidden">
-            {engine.error && outputMode === 'editor' ? (
+            {outputMode === 'inspector' ? (
+              <FieldInspector
+                parsedMessage={engine.parsedMessage ?? undefined}
+                messageType={engine.detectionResult?.messageType ?? MessageType.UNKNOWN}
+              />
+            ) : engine.error && outputMode === 'editor' ? (
               <div className="p-4 bg-red-950/50 border border-red-800 rounded m-2">
                 <p className="text-red-300 font-medium">Error</p>
                 <p className="text-red-200 text-sm mt-1">{engine.error}</p>

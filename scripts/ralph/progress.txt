@@ -678,3 +678,69 @@ Started: 2026-02-10
 - Regex character classes don't need forward slash escaping: [^/\n] not [^\/\n]
 
 ---
+## 2026-02-11 07:40:40 - PLAY-015
+- Implemented complete translation panel UI in src/components/TranslationPanel.tsx
+- Created comprehensive TranslationPanel component with:
+  - Translation direction display (source type → target type)
+  - Translated message output with CodeMirror editor and automatic syntax highlighting (MT or XML)
+  - Data loss warnings section with color-coded categories (Truncation, No Equivalent, Precision Loss, Optional Field, Format Change)
+  - Copy button to copy translated message to clipboard
+  - Swap button to reverse-translate (put translated output back into input for round-trip translation)
+  - Success message when no data loss warnings occur
+  - Empty state when no translation has been performed yet
+- Extended useEngine hook with translation state management:
+  - Added translationResult state to store translation output
+  - Implemented async translate(targetFormat) function
+  - Auto-detects source format and validates target format is different
+  - Error handling for empty messages, undetectable formats, and same-format translation attempts
+  - Clear translation result when clearing state
+- Integrated TranslationPanel into App.tsx:
+  - Added 'translation' output mode alongside 'editor' and 'validation'
+  - Updated handleTranslate to determine target format automatically (MT→MX or MX→MT)
+  - Added handleCopyOutput to copy translated message to clipboard
+  - Added handleSwapInputOutput to reverse-translate (input ← output swap)
+  - Updated output panel label to show "Translation" when in translation mode
+  - Added keyboard shortcut Ctrl/Cmd+Shift+T for translation action
+- Created comprehensive test suite with 23 tests covering:
+  - Empty state rendering
+  - Translation direction display for all 8 message types (MT103/202/940/942, pacs.008/009, camt.053/052)
+  - CodeMirror editor integration for translated output
+  - Copy and Swap button rendering and click handlers
+  - Success message when no warnings exist
+  - Data loss warnings display with all 5 categories (Truncation, No Equivalent, Precision Loss, Optional Field, Format Change)
+  - Warning card rendering with field paths and descriptions
+  - Conditional button rendering (only show when handlers provided)
+- Extended useEngine tests with 8 new translation tests covering:
+  - MT103 → pacs.008 translation
+  - pacs.008 → MT103 translation
+  - Error handling for empty messages, invalid formats, and same-format translation
+  - Translation result structure validation
+  - Detection result preservation during translation
+- All quality checks passing:
+  - ✅ npm run build (729KB bundle, expected size)
+  - ✅ npm run lint (0 errors, 0 warnings)
+  - ✅ npm run test (399 tests passing, 9 skipped)
+  - ✅ npx tsc --noEmit (strict mode, 0 errors)
+
+**Files changed:**
+- src/components/TranslationPanel.tsx, TranslationPanel.test.tsx (new, 178 + 322 lines)
+- src/hooks/useEngine.ts (+57 lines with translate function)
+- src/hooks/useEngine.test.ts (+106 lines with translation tests)
+- src/App.tsx (+45 lines with TranslationPanel integration, keyboard shortcuts, handlers)
+- scripts/ralph/prd.json (PLAY-015 marked as passes: true)
+
+**Learnings:**
+- Translation panel follows same pattern as ValidationPanel with outputMode state to switch between views
+- Auto-detecting target format based on source (MT→MX, MX→MT) provides better UX than requiring user to select format
+- Using optional callback props (onCopyOutput?, onSwapInputOutput?) allows flexible component composition
+- navigator.clipboard.writeText() provides simple clipboard access for Copy functionality
+- DataLossCategory enum should be Record-mapped to color/label configs for consistent warning display
+- Translation warnings use amber color scheme to distinguish from validation errors (red) and info (blue)
+- Swap functionality enables reverse translation workflow: paste MT103 → translate to pacs.008 → swap → translate back to MT103 (round-trip testing)
+- Editor language is automatically switched based on targetFormat (MT → 'mt', MX → 'xml')
+- Translation direction display shows message types (e.g., "MT103 → pacs.008.001.10") for clear user feedback
+- Success banner when no warnings improves UX - users know translation completed cleanly
+- Using fireEvent.click instead of userEvent simplifies tests and avoids additional dependencies
+- All translation logic is in the engine (translator.ts) - the UI just displays results and provides controls
+
+---
