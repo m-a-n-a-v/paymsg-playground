@@ -7,11 +7,12 @@ import { Editor } from './components/Editor';
 import { ValidationPanel } from './components/ValidationPanel';
 import { TranslationPanel } from './components/TranslationPanel';
 import { FieldInspector } from './components/FieldInspector';
+import { DiffView } from './components/DiffView';
 import { samples } from './samples/messages';
 import { MessageFormat, MessageType } from './engine/types';
 import { useEngine } from './hooks/useEngine';
 
-type OutputMode = 'editor' | 'validation' | 'translation' | 'inspector';
+type OutputMode = 'editor' | 'validation' | 'translation' | 'inspector' | 'diff';
 
 function App() {
   const engine = useEngine();
@@ -71,7 +72,7 @@ function App() {
       : MessageFormat.MT;
 
     void engine.translate(targetFormat);
-    setOutputMode('translation');
+    setOutputMode('diff');
   }, [engine]);
 
   const handleFormat = () => {
@@ -195,6 +196,18 @@ function App() {
             >
               Translation
             </button>
+            <button
+              onClick={() => {
+                setOutputMode('diff');
+              }}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                outputMode === 'diff'
+                  ? 'text-cyan-400 border-cyan-400'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300'
+              }`}
+            >
+              Diff
+            </button>
           </div>
           <div className="flex-1 overflow-hidden">
             {outputMode === 'inspector' ? (
@@ -214,6 +227,12 @@ function App() {
                 result={engine.translationResult ?? undefined}
                 onCopyOutput={handleCopyOutput}
                 onSwapInputOutput={handleSwapInputOutput}
+              />
+            ) : outputMode === 'diff' ? (
+              <DiffView
+                translationResult={engine.translationResult ?? undefined}
+                originalMessage={engine.inputMessage}
+                parsedMessage={engine.parsedMessage ?? undefined}
               />
             ) : (
               <Editor
