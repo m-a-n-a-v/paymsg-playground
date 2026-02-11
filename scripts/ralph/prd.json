@@ -6,7 +6,7 @@
       "title": "Project scaffolding — Vite + React + TypeScript + Tailwind",
       "description": "Initialize the project with Vite, React 19, TypeScript strict mode, Tailwind CSS v4, Vitest, and ESLint. Create package.json with all dependencies (react, react-dom, @codemirror/state, @codemirror/view, @codemirror/lang-xml, @codemirror/theme-one-dark, lucide-react, tailwindcss@next, @tailwindcss/vite). Set up tsconfig.json with strict mode. Set up vite.config.ts with React plugin. Create index.html with dark theme. Set up Tailwind with a dark financial-terminal theme. Create a basic App.tsx with 'paymsg playground' heading. Ensure npm install, npm run build, npm run test, and npx tsc --noEmit all pass.",
       "priority": 1,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-002",
