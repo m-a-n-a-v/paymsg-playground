@@ -97,7 +97,7 @@
       "title": "Translation engine — MT202 ↔ pacs.009, MT940 ↔ camt.053, MT942 ↔ camt.052",
       "description": "Extend the translator to support all 4 message pair translations. MT202 ↔ pacs.009: similar to MT103 but simpler (FI parties only, no customer details). MT940 ↔ camt.053: map statement lines (:61:) to entries, balances (:60F:,:62F:) to balance types (OPBD,CLBD), information (:86:) to additional info. MT942 ↔ camt.052: similar to MT940 but for interim reports, handle floor limits and debit/credit totals. Load each mapping from specs. Implement a translateMessage(input, targetFormat) dispatch function that auto-detects source and calls the right translator. Write tests for all 4 pairs in both directions.",
       "priority": 14,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-015",

@@ -625,3 +625,56 @@ Started: 2026-02-10
 - Using enums (DataLossCategory.TRUNCATION) instead of string literals improves type safety and prevents typos
 
 ---
+
+## 2026-02-11 07:35:00 - PLAY-014
+- Implemented translation support for three additional message pairs (8 translators total):
+  1. MT202 ↔ pacs.009 (Financial Institution Credit Transfer)
+  2. MT940 ↔ camt.053 (Bank-to-Customer Statement)
+  3. MT942 ↔ camt.052 (Interim Transaction Report)
+- Each message pair supports bidirectional translation with proper field mappings
+- MT202 ↔ pacs.009:
+  - Maps institutional parties: InstgAgt (field 52), IntrmyAgt (field 56), CdtrAgt (field 57), Cdtr (field 58)
+  - Handles Related Reference (field 21) for cover payment linking
+  - UETR mapping from Block 3 tag 121
+  - Defaults charge bearer to SHAR (MT202 has no charge fields)
+  - Preserves account identifiers with party BICs
+- MT940 ↔ camt.053:
+  - Translates opening/closing balances (60F/60M → OPBD, 62F/62M → CLBD)
+  - Maps repeating field 61 (statement lines) to Ntry elements
+  - Associates field 86 (info to account owner) with entries as remittance info
+  - Parses complex field 61 structure: value date, entry date, D/C mark, funds code, amount, tx type, customer ref, bank ref, supplementary details
+  - Handles IBAN detection and validation for account identification
+  - Preserves transaction type codes (SWIFT bank tx codes)
+- MT942 ↔ camt.052:
+  - Similar entry structure to MT940 but without balance fields
+  - Translates date/time indication (field 13D) to ISO datetime format
+  - Maps floor limit (field 34F) metadata to reporting source
+  - Translates summary totals (90D/90C) to TxsSummary with debit/credit counts and sums
+  - Preserves intraday reporting semantics
+- Updated translateMessage dispatch to handle all 4 message pairs (MT103/202/940/942 ↔ pacs.008/009, camt.053/052)
+- Added comprehensive test coverage:
+  - 8 test suites (one for each direction of each message pair)
+  - Tests validate field mappings, date conversions, amount format conversions, balance types
+  - Updated error handling tests to use truly unsupported types (MT199, pacs.002)
+  - All 369 tests passing
+- All quality checks pass:
+  - ✅ npm run build (with 1 minor bundle size warning)
+  - ✅ npm run lint (0 errors, 0 warnings)
+  - ✅ npm run test (369 tests passing)
+  - ✅ npx tsc --noEmit (strict mode, 0 errors)
+
+**Files changed:**
+- src/engine/translator.ts (+~1900 lines with all translators)
+- src/engine/translator.test.ts (+370 lines with comprehensive tests)
+
+**Learnings:**
+- MT940/MT942 field 61 parsing is complex - requires careful position tracking for variable-length subfields
+- querySelector returns Element | null, must check before accessing textContent to satisfy TypeScript strict mode and ESLint
+- TypeScript exactOptionalPropertyTypes requires explicit `| undefined` in return types for optional properties
+- Field 86 follows field 61 in statements - need to track association using index mapping
+- MT940/MT942 use same field 61 structure but different contexts (statement vs interim report)
+- Balance field format is consistent across 60F/60M/62F/62M: D/C mark + YYMMDD + CCC + amount
+- MT202 is simpler than MT103 - no customer parties, only financial institutions
+- Regex character classes don't need forward slash escaping: [^/\n] not [^\/\n]
+
+---
