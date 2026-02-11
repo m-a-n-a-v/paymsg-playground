@@ -8,9 +8,11 @@ import { ValidationPanel } from './components/ValidationPanel';
 import { TranslationPanel } from './components/TranslationPanel';
 import { FieldInspector } from './components/FieldInspector';
 import { DiffView } from './components/DiffView';
+import { KeyboardShortcutsDialog } from './components/KeyboardShortcutsDialog';
 import { samples } from './samples/messages';
 import { MessageFormat, MessageType } from './engine/types';
 import { useEngine } from './hooks/useEngine';
+import { formatMt, formatXml } from './engine/formatter';
 
 type OutputMode = 'editor' | 'validation' | 'translation' | 'inspector' | 'diff';
 
@@ -20,6 +22,7 @@ function App() {
   const [inputLanguage, setInputLanguage] = useState<'mt' | 'xml'>('mt');
   const [outputLanguage, setOutputLanguage] = useState<'mt' | 'xml' | 'json'>('json');
   const [outputMode, setOutputMode] = useState<OutputMode>('editor');
+  const [showHelp, setShowHelp] = useState(false);
 
   // Update input language when detection changes
   useEffect(() => {
@@ -75,10 +78,26 @@ function App() {
     setOutputMode('diff');
   }, [engine]);
 
-  const handleFormat = () => {
-    // Placeholder for format action
-    console.log('Format functionality will be implemented');
-  };
+  const handleFormat = useCallback(() => {
+    if (!engine.inputMessage) {
+      return;
+    }
+
+    try {
+      let formatted: string;
+      if (engine.detectionResult?.format === MessageFormat.MX) {
+        formatted = formatXml(engine.inputMessage);
+      } else if (engine.detectionResult?.format === MessageFormat.MT) {
+        formatted = formatMt(engine.inputMessage);
+      } else {
+        return;
+      }
+
+      engine.setInputMessage(formatted);
+    } catch (error) {
+      console.error('Format error:', error);
+    }
+  }, [engine]);
 
   const handleCopyOutput = useCallback(() => {
     if (engine.translationResult?.translatedMessage) {
@@ -108,6 +127,18 @@ function App() {
       } else if (isMod && event.shiftKey && event.key === 'T') {
         event.preventDefault();
         handleTranslate();
+      } else if (isMod && event.shiftKey && event.key === 'F') {
+        event.preventDefault();
+        handleFormat();
+      } else if (isMod && event.key === 'k') {
+        event.preventDefault();
+        handleClear();
+      } else if (isMod && event.key === '/') {
+        event.preventDefault();
+        setShowHelp(true);
+      } else if (event.key === 'Escape' && showHelp) {
+        event.preventDefault();
+        setShowHelp(false);
       }
     };
 
@@ -115,7 +146,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleParse, handleValidate, handleTranslate]);
+  }, [handleParse, handleValidate, handleTranslate, handleFormat, handleClear, showHelp]);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-terminal-bg)] text-[var(--color-terminal-fg)]">
@@ -127,6 +158,9 @@ function App() {
         onFormat={handleFormat}
         onClear={handleClear}
         onSampleSelect={handleSampleSelect}
+        onShowHelp={() => {
+          setShowHelp(true);
+        }}
         samples={samples.map((s: { id: string; label: string; description: string }) => ({ id: s.id, label: s.label, description: s.description }))}
         selectedSample={selectedSample}
       />
@@ -147,7 +181,7 @@ function App() {
         </div>
 
         <div className="flex flex-col">
-          <div className="border-b border-zinc-800 bg-zinc-900 flex">
+          <div className="border-b border-zinc-800 bg-zinc-900 flex" role="tablist" aria-label="Output view tabs">
             <button
               onClick={() => {
                 setOutputMode('inspector');
@@ -157,6 +191,9 @@ function App() {
                   ? 'text-cyan-400 border-cyan-400'
                   : 'text-zinc-400 border-transparent hover:text-zinc-300'
               }`}
+              role="tab"
+              aria-selected={outputMode === 'inspector'}
+              aria-controls="output-panel"
             >
               Inspector
             </button>
@@ -169,6 +206,9 @@ function App() {
                   ? 'text-cyan-400 border-cyan-400'
                   : 'text-zinc-400 border-transparent hover:text-zinc-300'
               }`}
+              role="tab"
+              aria-selected={outputMode === 'editor'}
+              aria-controls="output-panel"
             >
               Output
             </button>
@@ -181,6 +221,9 @@ function App() {
                   ? 'text-cyan-400 border-cyan-400'
                   : 'text-zinc-400 border-transparent hover:text-zinc-300'
               }`}
+              role="tab"
+              aria-selected={outputMode === 'validation'}
+              aria-controls="output-panel"
             >
               Validation
             </button>
@@ -193,6 +236,9 @@ function App() {
                   ? 'text-cyan-400 border-cyan-400'
                   : 'text-zinc-400 border-transparent hover:text-zinc-300'
               }`}
+              role="tab"
+              aria-selected={outputMode === 'translation'}
+              aria-controls="output-panel"
             >
               Translation
             </button>
@@ -205,11 +251,14 @@ function App() {
                   ? 'text-cyan-400 border-cyan-400'
                   : 'text-zinc-400 border-transparent hover:text-zinc-300'
               }`}
+              role="tab"
+              aria-selected={outputMode === 'diff'}
+              aria-controls="output-panel"
             >
               Diff
             </button>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden" id="output-panel" role="tabpanel">
             {outputMode === 'inspector' ? (
               <FieldInspector
                 parsedMessage={engine.parsedMessage ?? undefined}
@@ -250,6 +299,13 @@ function App() {
       <StatusBar
         messageFormat={engine.detectionResult?.format}
         messageType={engine.detectionResult?.messageType}
+      />
+
+      <KeyboardShortcutsDialog
+        isOpen={showHelp}
+        onClose={() => {
+          setShowHelp(false);
+        }}
       />
     </div>
   );

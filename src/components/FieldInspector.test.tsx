@@ -174,7 +174,9 @@ describe('FieldInspector', () => {
     });
 
     it('should handle missing block4', () => {
-      const messageWithoutBlock4: MtMessage = {};
+      const messageWithoutBlock4: MtMessage = {
+        block1: { app_id: 'F', service_id: '01', lt_address: 'BANKBEBBAXXX', session_number: '0000', sequence_number: '000000' }
+      };
 
       render(<FieldInspector parsedMessage={messageWithoutBlock4} messageType={MessageType.MT103} />);
       expect(screen.getByText(/No fields to display/i)).toBeInTheDocument();
