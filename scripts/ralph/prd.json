@@ -83,7 +83,7 @@
       "title": "Validation panel UI",
       "description": "Create src/components/ValidationPanel.tsx to display validation results. Wire up the Validate button in the toolbar. Show results as a categorized list: errors first (red), then warnings (amber), then info (blue). Each issue shows: severity icon, field path, message, and suggestion (if any). Show a summary at the top: 'X errors, Y warnings, Z info' with color-coded badges. If validation passes with no errors, show a green success banner. Allow clicking on a field path to highlight the relevant part in the input editor (bonus — at minimum show the path). Add filter toggles to show/hide each severity level.",
       "priority": 12,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-013",

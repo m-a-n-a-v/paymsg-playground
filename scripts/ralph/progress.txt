@@ -497,3 +497,64 @@ Started: 2026-02-10
 - Validation issues should include field_path, message, severity, and optional suggestion for better UX
 
 ---
+## 2026-02-11 07:12:00 - PLAY-012
+- Implemented complete validation panel UI in src/components/ValidationPanel.tsx
+- Created comprehensive ValidationPanel component with:
+  - Empty state display prompting users to validate
+  - Success banner (green) when validation passes with no errors
+  - Error banner (red) with issue summary when validation fails
+  - Categorized issue display: errors (red), warnings (amber), info (blue)
+  - Each issue card shows: severity icon, field path, message, suggestion (if provided), and issue ID
+  - Filter toggles for each severity level to show/hide issues
+  - "All issues filtered out" message when all filters are disabled
+  - Proper color coding and visual hierarchy matching financial terminal theme
+- Enhanced useEngine hook with validation state management:
+  - Added validationResult state to store validation output
+  - Implemented async validate() function calling validateMessage with detected message type and format
+  - Error handling for empty messages and undetectable formats
+  - Clear validation result when clearing state
+- Integrated ValidationPanel into App.tsx:
+  - Added outputMode state to switch between 'editor' and 'validation' views
+  - Updated output panel to show ValidationPanel when in validation mode
+  - Changed output panel label to "Validation" when in validation mode
+  - Wired Validate button to call engine.validate() and switch to validation mode
+  - Added keyboard shortcut Ctrl/Cmd+Shift+V for validation
+  - Handled error display only in editor mode (validation mode has its own error handling)
+- Fixed ValidationIssue type to make id field optional (matching validator implementation)
+- Updated validator tests to handle optional id field with optional chaining
+- Created comprehensive test suite with 19 tests covering:
+  - Empty state rendering
+  - Success and failure banners
+  - Issue display with correct styling for each severity
+  - Issue sorting (errors first, then warnings, then info)
+  - Filter toggle functionality for all three severity levels
+  - Multiple filters working independently
+  - Filtered out state when all filters are disabled
+  - Long field paths and edge cases
+  - Issue ID and suggestion display
+- Updated useEngine tests with 6 new validation tests covering async validation workflow
+- All quality checks passing: build ✅ (695KB bundle), lint ✅, test ✅ (289 tests), tsc ✅
+
+**Files changed:**
+- src/components/ValidationPanel.tsx, ValidationPanel.test.tsx (new)
+- src/hooks/useEngine.ts, useEngine.test.ts (+validation state and tests)
+- src/App.tsx (+outputMode state, ValidationPanel integration, keyboard shortcut)
+- src/App.test.tsx (updated to test validation mode)
+- src/engine/types.ts (made ValidationIssue.id optional)
+- src/engine/validator.test.ts (optional chaining for id field access)
+- scripts/ralph/prd.json (PLAY-012 marked as passes: true)
+
+**Learnings:**
+- Severity enum must be imported as a value (not just as a type) to use in Record keys and runtime comparisons
+- Using Record<Severity, boolean> for filter state provides type safety and exhaustiveness checking
+- Template literals with numbers require String() conversion in strict TypeScript with @typescript-eslint/restrict-template-expressions
+- Arrow functions that return void (setState calls) must use braces to satisfy @typescript-eslint/no-confusing-void-expression
+- Optional id field in ValidationIssue requires optional chaining (?.) when accessing in filters
+- Using outputMode state to switch between editor and validation views provides clean separation of concerns
+- ValidationPanel empty state improves UX by guiding users on what to do next
+- Filter toggles with visual state (colored borders) make it clear which severities are active
+- Categorizing issues by severity (errors, warnings, info) matches standard validation UX patterns
+- Color-coded issue cards with icons provide instant visual feedback on issue severity
+- Using Lucide React icons (AlertCircle, AlertTriangle, Info, CheckCircle) creates consistent iconography
+
+---

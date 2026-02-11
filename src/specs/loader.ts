@@ -152,6 +152,17 @@ export interface MappingSpec {
   description: string;
   mapping_notes: string[];
   mappings: FieldMapping[];
+  mt_only_fields?: Array<{
+    mt_tag: string;
+    mt_field_name: string;
+    reason: string;
+  }>;
+  mx_only_fields?: Array<{
+    mx_path: string;
+    mx_element_name: string;
+    default_strategy: string;
+    reason: string;
+  }>;
 }
 
 // Validation Rules Types

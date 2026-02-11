@@ -156,10 +156,12 @@ export interface DataLossWarning {
  * Translation result
  */
 export interface TranslationResult {
-  success: boolean;
-  translated_message?: string;
+  translatedMessage: string;
+  sourceFormat: MessageFormat;
+  targetFormat: MessageFormat;
+  sourceType: MessageType;
+  targetType: MessageType;
   warnings: DataLossWarning[];
-  error?: string;
 }
 
 /**
