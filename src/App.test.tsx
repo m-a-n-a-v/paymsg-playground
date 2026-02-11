@@ -108,13 +108,16 @@ describe('App', () => {
   });
 
   it('handles Validate button click', () => {
-    const { container } = render(<App />);
+    render(<App />);
 
     fireEvent.click(screen.getByText('Validate'));
 
-    // Check that output editor exists
-    const editors = container.querySelectorAll('.cm-editor');
-    expect(editors.length).toBe(2);
+    // Should show validation panel with empty state
+    expect(screen.getByText('No validation results yet')).toBeInTheDocument();
+    expect(screen.getByText('Click Validate to check your message')).toBeInTheDocument();
+
+    // Output label should change to "Validation"
+    expect(screen.getByText('Validation')).toBeInTheDocument();
   });
 
   it('handles Translate button click', () => {

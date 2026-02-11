@@ -117,11 +117,11 @@ export type ParsedMessage = MtMessage | MxMessage;
  * Validation issue details
  */
 export interface ValidationIssue {
-  id: string;
+  id?: string | undefined;
   severity: Severity;
   field_path: string;
   message: string;
-  suggestion?: string;
+  suggestion?: string | undefined;
 }
 
 /**

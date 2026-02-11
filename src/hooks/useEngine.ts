@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { parseMessage } from '../engine/parser';
 import { detectMessage } from '../engine/detector';
-import type { ParsedMessage, DetectionResult } from '../engine/types';
+import { validateMessage } from '../engine/validator';
+import type { ParsedMessage, DetectionResult, ValidationResult } from '../engine/types';
 import { MessageFormat } from '../engine/types';
 
 interface EngineState {
@@ -10,6 +11,7 @@ interface EngineState {
   outputLanguage: 'json' | 'mt' | 'xml';
   parsedMessage: ParsedMessage | null;
   detectionResult: DetectionResult | null;
+  validationResult: ValidationResult | null;
   error: string | null;
   isReadOnly: boolean;
 }
@@ -17,6 +19,7 @@ interface EngineState {
 interface EngineActions {
   setInputMessage: (message: string) => void;
   parse: () => void;
+  validate: () => Promise<void>;
   clear: () => void;
   detectFormat: (message: string) => DetectionResult;
 }
@@ -27,6 +30,7 @@ const initialState: EngineState = {
   outputLanguage: 'json',
   parsedMessage: null,
   detectionResult: null,
+  validationResult: null,
   error: null,
   isReadOnly: true,
 };
@@ -99,6 +103,50 @@ export function useEngine(): EngineState & EngineActions {
     }
   }, [state.inputMessage]);
 
+  const validate = useCallback(async () => {
+    try {
+      if (!state.inputMessage.trim()) {
+        setState((prev) => ({
+          ...prev,
+          error: 'No message to validate',
+          validationResult: null,
+        }));
+        return;
+      }
+
+      const detection = detectMessage(state.inputMessage);
+      if (detection.format === MessageFormat.UNKNOWN) {
+        setState((prev) => ({
+          ...prev,
+          error: 'Unable to detect message format',
+          validationResult: null,
+        }));
+        return;
+      }
+
+      const result = await validateMessage(
+        state.inputMessage,
+        detection.messageType,
+        detection.format
+      );
+
+      setState((prev) => ({
+        ...prev,
+        validationResult: result,
+        detectionResult: detection,
+        error: null,
+      }));
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Unknown validation error';
+      setState((prev) => ({
+        ...prev,
+        error: errorMessage,
+        validationResult: null,
+      }));
+    }
+  }, [state.inputMessage]);
+
   const clear = useCallback(() => {
     setState(initialState);
   }, []);
@@ -107,6 +155,7 @@ export function useEngine(): EngineState & EngineActions {
     ...state,
     setInputMessage,
     parse,
+    validate,
     clear,
     detectFormat,
   };

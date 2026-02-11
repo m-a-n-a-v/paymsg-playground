@@ -231,4 +231,90 @@ High Street 2
     expect(detection?.format).toBe(MessageFormat.MT);
     expect(detection?.messageType).toBe(MessageType.MT103);
   });
+
+  it('should validate MT103 message successfully', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(sampleMT103);
+    });
+
+    await act(async () => {
+      await result.current.validate();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.validationResult).not.toBeNull();
+    expect(result.current.validationResult?.issues).toBeDefined();
+  });
+
+  it('should validate pacs.008 message successfully', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(samplePacs008);
+    });
+
+    await act(async () => {
+      await result.current.validate();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.validationResult).not.toBeNull();
+  });
+
+  it('should show error when validating empty message', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    await act(async () => {
+      await result.current.validate();
+    });
+
+    expect(result.current.error).toBe('No message to validate');
+    expect(result.current.validationResult).toBeNull();
+  });
+
+  it('should show error when validating invalid format', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage('invalid message format');
+    });
+
+    await act(async () => {
+      await result.current.validate();
+    });
+
+    expect(result.current.error).toBe('Unable to detect message format');
+    expect(result.current.validationResult).toBeNull();
+  });
+
+  it('should clear validation result when clearing state', () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(sampleMT103);
+    });
+
+    act(() => {
+      result.current.clear();
+    });
+
+    expect(result.current.validationResult).toBeNull();
+  });
+
+  it('should detect format when validating', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(sampleMT103);
+    });
+
+    await act(async () => {
+      await result.current.validate();
+    });
+
+    expect(result.current.detectionResult).not.toBeNull();
+    expect(result.current.detectionResult?.format).toBe(MessageFormat.MT);
+  });
 });

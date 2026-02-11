@@ -48,7 +48,7 @@ Tech Services SARL
 
         const result = await validateMessage(invalidMT103, MessageType.MT103, MessageFormat.MT);
         expect(result.valid).toBe(false);
-        const lengthIssue = result.issues.find(i => i.id.includes('LENGTH_20'));
+        const lengthIssue = result.issues.find(i => i.id?.includes('LENGTH_20'));
         expect(lengthIssue).toBeDefined();
         expect(lengthIssue?.severity).toBe(Severity.ERROR);
       });
@@ -355,7 +355,7 @@ RECVBICAXXX
 
       const result = await validateMessage(invalidMT103, MessageType.MT103, MessageFormat.MT);
       // Should have a warning about charset
-      const charsetIssue = result.issues.find(i => i.id.includes('CHARSET'));
+      const charsetIssue = result.issues.find(i => i.id?.includes('CHARSET'));
       expect(charsetIssue).toBeDefined();
       expect(charsetIssue?.severity).toBe(Severity.WARNING);
     });
@@ -398,7 +398,7 @@ BANKDEFF
 -}`;
 
       const result = await validateMessage(validMT103, MessageType.MT103, MessageFormat.MT);
-      const bicErrors = result.issues.filter(i => i.id.includes('BIC'));
+      const bicErrors = result.issues.filter(i => i.id?.includes('BIC'));
       expect(bicErrors).toHaveLength(0);
     });
 
@@ -415,7 +415,7 @@ CHASUS33XXX
 -}`;
 
       const result = await validateMessage(validMT103, MessageType.MT103, MessageFormat.MT);
-      const bicErrors = result.issues.filter(i => i.id.includes('BIC'));
+      const bicErrors = result.issues.filter(i => i.id?.includes('BIC'));
       expect(bicErrors).toHaveLength(0);
     });
 

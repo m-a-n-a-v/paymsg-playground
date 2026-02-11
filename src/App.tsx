@@ -4,15 +4,19 @@ import Header from './components/Header';
 import Toolbar from './components/Toolbar';
 import StatusBar from './components/StatusBar';
 import { Editor } from './components/Editor';
+import { ValidationPanel } from './components/ValidationPanel';
 import { samples } from './samples/messages';
 import { MessageFormat } from './engine/types';
 import { useEngine } from './hooks/useEngine';
+
+type OutputMode = 'editor' | 'validation';
 
 function App() {
   const engine = useEngine();
   const [selectedSample, setSelectedSample] = useState('');
   const [inputLanguage, setInputLanguage] = useState<'mt' | 'xml'>('mt');
   const [outputLanguage, setOutputLanguage] = useState<'mt' | 'xml' | 'json'>('json');
+  const [outputMode, setOutputMode] = useState<OutputMode>('editor');
 
   // Update input language when detection changes
   useEffect(() => {
@@ -42,16 +46,18 @@ function App() {
     setSelectedSample('');
     setInputLanguage('mt');
     setOutputLanguage('json');
+    setOutputMode('editor');
   }, [engine]);
 
   const handleParse = useCallback(() => {
     engine.parse();
+    setOutputMode('editor');
   }, [engine]);
 
-  const handleValidate = () => {
-    // Placeholder for PLAY-012
-    console.log('Validation functionality will be implemented in PLAY-012');
-  };
+  const handleValidate = useCallback(() => {
+    void engine.validate();
+    setOutputMode('validation');
+  }, [engine]);
 
   const handleTranslate = () => {
     // Placeholder for PLAY-015
@@ -72,6 +78,9 @@ function App() {
       if (isMod && event.key === 'Enter') {
         event.preventDefault();
         handleParse();
+      } else if (isMod && event.shiftKey && event.key === 'V') {
+        event.preventDefault();
+        handleValidate();
       }
     };
 
@@ -79,7 +88,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleParse]);
+  }, [handleParse, handleValidate]);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-terminal-bg)] text-[var(--color-terminal-fg)]">
@@ -112,14 +121,18 @@ function App() {
 
         <div className="flex flex-col">
           <div className="border-b border-zinc-800 px-4 py-2 bg-zinc-900">
-            <span className="text-sm font-medium text-zinc-300">Output</span>
+            <span className="text-sm font-medium text-zinc-300">
+              {outputMode === 'validation' ? 'Validation' : 'Output'}
+            </span>
           </div>
           <div className="flex-1 overflow-hidden">
-            {engine.error ? (
+            {engine.error && outputMode === 'editor' ? (
               <div className="p-4 bg-red-950/50 border border-red-800 rounded m-2">
                 <p className="text-red-300 font-medium">Error</p>
                 <p className="text-red-200 text-sm mt-1">{engine.error}</p>
               </div>
+            ) : outputMode === 'validation' ? (
+              <ValidationPanel result={engine.validationResult ?? undefined} />
             ) : (
               <Editor
                 value={engine.outputContent}
