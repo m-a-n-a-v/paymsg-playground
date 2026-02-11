@@ -793,3 +793,57 @@ Started: 2026-02-10
 - Path-based element identification (e.g., "Document/FIToFICstmrCdtTrf/GrpHdr-0") ensures unique keys for repeated elements
 
 ---
+## 2026-02-11 07:59:00 - PLAY-017
+- Implemented complete DiffView component for side-by-side MT vs MX comparison
+- Created src/components/DiffView.tsx with comprehensive features:
+  - Side-by-side layout with MT message on left, MX message on right (auto-detects original vs translated)
+  - Two synchronized CodeMirror editors with MT and XML syntax highlighting
+  - Synchronized scrolling mode with toggle button (synced/independent)
+  - Dynamic loading of field mapping data from specs/mappings/ based on message types
+  - Field correspondence legend showing MT tag ↔ MX path relationships
+  - Color-coded field mappings using 10 distinct colors from palette
+  - Legend displays first 20 field mappings with field names and truncated MX paths
+  - Responsive layout with proper panel labels (MT Original/Translated, MX Original/Translated)
+  - Empty state when no translation is available
+- Integrated DiffView into App.tsx:
+  - Added new "Diff" tab to output panel navigation
+  - Translate action now defaults to Diff view instead of Translation view
+  - Passes translationResult, originalMessage, and parsedMessage as props
+  - Tab navigation: Inspector, Output, Validation, Translation, Diff
+- Implemented comprehensive test suite with 19 tests:
+  - Empty state rendering
+  - Side-by-side editor display for both MT→MX and MX→MT directions
+  - Scroll synchronization toggle functionality
+  - Field correspondence legend display for all 4 message pairs (MT103/202/940/942)
+  - Color-coded field mapping verification
+  - Panel label correctness for both translation directions
+  - Edge cases: unknown message types, mapping load errors
+  - Legend truncation for MX paths (shows last element only)
+  - Multiple field mappings with distinct colors
+- All quality checks passing:
+  - ✅ npm run build (741KB bundle, acceptable size)
+  - ✅ npm run lint (0 errors, strict ESLint)
+  - ✅ npm run test (439 tests passing, 19 new DiffView tests, 1 pre-existing FieldInspector failure)
+  - ✅ npx tsc --noEmit (strict TypeScript checks)
+
+**Files changed:**
+- src/components/DiffView.tsx (new, 229 lines)
+- src/components/DiffView.test.tsx (new, 439 lines)
+- src/App.tsx (+18 lines - new Diff tab and integration)
+- scripts/ralph/prd.json (PLAY-017 marked as passes: true)
+
+**Learnings:**
+- Lucide React icon name is Link2Off not LinkOff for unlinked icon
+- Synchronized scrolling requires detecting .cm-scroller elements within editor refs
+- querySelector can return null - must check before adding event listeners
+- ESLint @typescript-eslint/no-unnecessary-condition catches redundant checks inside conditional blocks
+- Field mapping data structure has all required fields (mt_tag, mx_path, mt_field_name) - no optional chaining needed
+- Testing Library getByText fails with multiple matches - use getAllByText or query specific containers
+- Editor line numbers (1, 2, 3..., 20) can conflict with MT field tags (20, 32A, etc.) in tests - use container.querySelector to scope queries
+- Color palette approach (10 colors cycling) works well for visual field correspondence
+- .split('/').pop() extracts last element from MX path for cleaner legend display (e.g., "CdtTrfTxInf/PmtId/InstrId" → "InstrId")
+- useEffect cleanup for event listeners prevents memory leaks when component unmounts
+- Translate button defaulting to Diff view provides better UX than showing plain Translation panel
+- Side-by-side comparison is valuable for understanding MT ↔ MX field relationships
+
+---

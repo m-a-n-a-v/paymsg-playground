@@ -118,7 +118,7 @@
       "title": "Diff view — side-by-side MT vs MX comparison",
       "description": "Create src/components/DiffView.tsx showing MT and MX messages side-by-side after translation. Highlight corresponding fields between MT and MX with matching colors (e.g., field 20 and MsgId both highlighted in same color, field 32A components and IntrBkSttlmAmt/IntrBkSttlmDt in same color). Use the mapping data to determine field correspondence. Show connecting lines or matching colors between related fields. Support scrolling both sides independently or synchronized. This view activates when a translation is performed. Include a legend showing the color mapping.",
       "priority": 17,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-018",
