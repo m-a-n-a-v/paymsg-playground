@@ -165,3 +165,46 @@ Started: 2026-02-10
 - The parseMxMessage function is a placeholder for PLAY-005 - marked with underscore prefix to avoid unused parameter lint error
 
 ---
+## 2026-02-11 06:20:45 - PLAY-005
+- Implemented complete MX (XML) message parser in src/engine/parser.ts
+- Implemented parseMxMessage() using browser's native DOMParser:
+  - Parses XML and detects parsing errors
+  - Extracts namespace from root element
+  - Returns MxMessage structure with document, root element, and namespace
+- Implemented XML navigation helpers:
+  - getElementByPath(): Navigate by path string (e.g., "FIToFICstmrCdtTrf/GrpHdr/MsgId") and return text content
+  - getElementNodeByPath(): Return Element node itself for accessing attributes
+  - getElementsByPath(): Get all matching elements for repeated elements (e.g., multiple balance entries)
+- Parsing support for all 4 MX message types:
+  - pacs.008 (FIToFICstmrCdtTrf): Customer credit transfer with GrpHdr, CdtTrfTxInf, party details
+  - pacs.009 (FICdtTrf): FI credit transfer with simplified structure
+  - camt.053 (BkToCstmrStmt): Bank statement with account info and multiple balance entries
+  - camt.052 (BkToCstmrAcctRpt): Interim report structure
+- Created comprehensive test suite with 58 tests:
+  - Parsing tests for all 4 MX types using realistic sample data from paymsg-specs
+  - Element extraction tests for GrpHdr, transaction details, party info, accounts
+  - Attribute access tests (e.g., Ccy attribute on amount elements)
+  - Multiple element tests (e.g., Balance entries in camt.053)
+  - Error handling tests for malformed XML
+  - Edge case tests (empty content, non-existent paths)
+- All quality checks passing: build, lint, test (111 tests total), tsc
+- Updated parseMessage() to dispatch to parseMxMessage() instead of throwing error
+
+**Files changed:**
+- src/engine/parser.ts (+141 lines)
+- src/engine/parser.test.ts (+357 lines)
+- scripts/ralph/prd.json (PLAY-005 marked as passes: true)
+
+**Learnings:**
+- DOMParser is browser-native and doesn't require external dependencies - perfect for client-side XML parsing
+- TypeScript HTMLCollection requires explicit type casting: `current.children[i] as Element` to avoid implicit any
+- ESLint @typescript-eslint/no-unnecessary-condition rule catches redundant null checks after type assertions
+- documentElement is never null in a parsed Document, so null check is unnecessary
+- XML namespace detection via element.namespaceURI works reliably for ISO 20022 messages
+- Path-based element navigation is more intuitive than querySelector with namespace prefixes
+- Using localName instead of tagName ignores namespace prefixes and simplifies matching
+- getElementsByPath pattern is useful for repeated elements like statement entries or balances
+- Testing with realistic sample data from sibling repo ensures parser works with actual message structures
+- All 4 MX message types share GrpHdr pattern but have different root elements and transaction structures
+
+---

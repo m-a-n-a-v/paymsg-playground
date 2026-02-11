@@ -34,7 +34,7 @@
       "title": "MX (XML) message parser",
       "description": "Extend src/engine/parser.ts with MX message parsing using DOMParser (browser-native). Parse XML into typed structures for pacs.008, pacs.009, camt.053, camt.052. Extract key elements: GrpHdr (MsgId, CreDtTm, NbOfTxs), transaction details (amounts with Ccy attributes, dates, party info, account IDs, BICs). Handle XML namespaces. Handle optional elements gracefully. Return a generic MxMessage structure with the parsed document tree accessible by path (e.g., 'GrpHdr/MsgId'). Implement getElementByPath() helper for navigating the parsed tree. Write tests parsing sample XML messages for all 4 MX types.",
       "priority": 5,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-006",
