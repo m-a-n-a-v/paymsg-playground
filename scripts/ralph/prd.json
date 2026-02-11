@@ -20,7 +20,7 @@
       "title": "Engine types and format detector",
       "description": "Create src/engine/types.ts with all shared TypeScript types: MessageType enum, MessageFormat (MT/MX), ParsedMessage, MtMessage (block1-5), MtField (tag, value, subfields), MxMessage (document root), ValidationResult, ValidationIssue (id, severity, field_path, message, suggestion), Severity enum, TranslationResult, DataLossWarning. Create src/engine/detector.ts that auto-detects message format: starts with '{1:' → MT, starts with '<?xml' or '<Document' → MX. Also detect specific MT type from Block 2 message_type field, and MX type from XML namespace. Write thorough tests for the detector with all 8 message types plus edge cases (empty, invalid, partial).",
       "priority": 3,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-004",

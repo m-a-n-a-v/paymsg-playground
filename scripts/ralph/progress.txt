@@ -83,3 +83,46 @@ Started: 2026-02-10
 - Using a generic loadJson<T> helper with type parameter ensures type safety across all loaders
 
 ---
+## 2026-02-11 06:05:00 - PLAY-003
+- Created src/engine/types.ts with comprehensive TypeScript type definitions:
+  - MessageType enum with all 8 supported message types (MT103, MT202, MT940, MT942, pacs.008, pacs.009, camt.053, camt.052)
+  - MessageFormat enum (MT, MX, UNKNOWN)
+  - Severity enum (ERROR, WARNING, INFO)
+  - MtMessage structure with 5 blocks (block1-5)
+  - MtField interface with tag, value, and optional subfields
+  - MxMessage structure with namespace, document, and root element
+  - ValidationResult and ValidationIssue interfaces
+  - DataLossWarning and DataLossCategory for translation warnings
+  - TranslationResult interface
+  - DetectionResult interface
+  - Type guards: isMtMessage() and isMxMessage()
+- Implemented src/engine/detector.ts with message format and type detection:
+  - detectMessage(): auto-detects format (MT/MX) and specific message type
+  - MT detection: looks for '{1:' prefix
+  - MX detection: looks for '<?xml' or '<Document' prefix
+  - detectMtType(): extracts message type from Block 2 (e.g., {2:I103...})
+  - detectMxType(): extracts message type from XML namespace (e.g., pacs.008.001.10)
+  - Helper functions: isMtFormat(), isMxFormat(), getMessageTypeName()
+  - Returns confidence score (1.0 for identified types, 0.7 for format-only, 0 for unknown)
+- Created comprehensive test suite with 29 tests covering:
+  - All 4 MT message types (MT103, MT202, MT940, MT942)
+  - All 4 MX message types (pacs.008, pacs.009, camt.053, camt.052)
+  - Both Input and Output MT formats
+  - Edge cases: empty messages, whitespace, invalid format, partial messages, unknown types
+  - Helper functions: isMtFormat(), isMxFormat(), getMessageTypeName()
+- All quality checks passing: build, lint, test (53 tests), tsc
+
+**Files changed:**
+- src/engine/types.ts (new)
+- src/engine/detector.ts (new)
+- src/engine/detector.test.ts (new)
+- scripts/ralph/prd.json (PLAY-003 marked as passes: true)
+
+**Learnings:**
+- TypeScript type guards (isMtMessage, isMxMessage) provide compile-time safety when working with union types
+- Confidence scores are useful for UI feedback when detection is ambiguous
+- MT Block 2 format differs for Input (I) vs Output (O) but both contain the 3-digit message type
+- XML namespace detection via regex is reliable even for partial documents
+- Messages starting with '<?xml' should be detected as MX format even if incomplete (reasonable UX)
+
+---
