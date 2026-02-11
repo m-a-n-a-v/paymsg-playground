@@ -132,7 +132,7 @@
       "title": "Final integration tests and production build",
       "description": "Write end-to-end integration tests in tests/: test the full flow for each message type (load sample → parse → validate → translate → verify output). Test error handling for malformed messages. Test format detection accuracy. Test all sample messages parse successfully. Test translation round-trips (MT→MX→MT preserves key fields). Ensure npm run build produces a working production bundle. Verify the build output is reasonable size (< 2MB total). Ensure npm run lint passes. Ensure npx tsc --noEmit passes. Fix any remaining warnings or issues. Add a .gitignore for node_modules, dist, .vite.",
       "priority": 19,
-      "passes": false
+      "passes": true
     }
   ]
 }
