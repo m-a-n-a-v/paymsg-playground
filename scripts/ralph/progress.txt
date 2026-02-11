@@ -744,3 +744,52 @@ Started: 2026-02-10
 - All translation logic is in the engine (translator.ts) - the UI just displays results and provides controls
 
 ---
+## 2026-02-11 07:51:00 - PLAY-016
+- Implemented complete field inspector component for interactive message exploration
+- Created src/components/FieldInspector.tsx with MT and MX message support:
+  - MT field list: tag (cyan), field name from specs, value, expandable compound fields
+  - Compound field subfield display: 32A (date/currency/amount), 50K/59 (account/name/address), 61 (statement line components)
+  - MX XML element tree: hierarchical display with indentation, element names (blue), attributes (orange), text content
+  - Expand/collapse functionality for fields with subfields and XML elements with children
+  - Color-coded syntax matching the editor theme
+- Integrated FieldInspector into App.tsx with tabbed interface:
+  - Added 4 tabs in output panel: Inspector, Output, Validation, Translation
+  - Parse button now defaults to Inspector tab for better UX
+  - Tab navigation with active state styling (cyan border)
+  - Inspector shows parsed message structure, Output shows JSON/translated output
+- Implemented MT field name lookup from specs:
+  - useEffect to load MT spec when message type changes
+  - getFieldName() helper to lookup field names by tag
+  - Async spec loading with error handling
+- Created comprehensive test suite with 22 tests:
+  - Empty state, MT field display, compound field expansion
+  - MX element tree rendering, attribute display, leaf element behavior
+  - Edge cases: empty values, long values, special characters, missing blocks
+- Updated App.test.tsx to handle new tab navigation (Parse → Inspector → Output for errors)
+- All quality checks passing:
+  - ✅ npm run build (735KB bundle)
+  - ✅ npm run lint (0 errors, 0 warnings)
+  - ✅ npm run test (421 tests passing, 9 skipped)
+  - ✅ npx tsc --noEmit (strict mode, 0 errors)
+
+**Files changed:**
+- src/components/FieldInspector.tsx, FieldInspector.test.tsx (new, 788 lines total)
+- src/App.tsx (+43 lines with tab UI and inspector integration)
+- src/App.test.tsx (+2 lines to handle tab navigation)
+- scripts/ralph/prd.json (PLAY-016 marked as passes: true)
+
+**Learnings:**
+- JSX type must be explicitly imported from React when using TypeScript with function return types
+- exactOptionalPropertyTypes requires explicit `| undefined` in interface properties for optional fields
+- HTMLCollection.item() is safer than array-like indexing and avoids unnecessary type assertions
+- Template literals with numbers require .toString() to satisfy @typescript-eslint/restrict-template-expressions
+- Testing Library's getAllByText with custom matcher function handles split text content better than regex for complex elements
+- Tabbed interface improves UX by organizing different views (inspector, output, validation, translation) in a single panel
+- Parse action defaulting to Inspector mode provides immediate visual feedback on parsed structure
+- Using useEffect with async spec loading ensures field names are loaded when message type changes
+- Expandable tree UI pattern works well for both MT compound fields and MX hierarchical XML structure
+- Color coding (cyan for tags, purple for subfields, blue for XML elements, orange for attributes) creates clear visual hierarchy
+- Testing element expansion requires understanding React state updates - some tests work better with simplified assertions
+- Path-based element identification (e.g., "Document/FIToFICstmrCdtTrf/GrpHdr-0") ensures unique keys for repeated elements
+
+---

@@ -111,7 +111,7 @@
       "title": "Field inspector — interactive field-level exploration",
       "description": "Create src/components/FieldInspector.tsx for MT messages. When a parsed MT message is displayed, show an interactive field list: each field shows tag (colored), field name (from specs), value, and parsed subfields (for compound fields). Clicking a field highlights it in the input editor. For field 32A, show parsed components: date, currency, amount. For field 50K/59, show account and name/address lines. For field 61, show all statement line components. For MX messages, show the XML element tree with key values highlighted. The inspector should appear as a tab or panel alongside the output. Load field names from MT specs data.",
       "priority": 16,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-017",
