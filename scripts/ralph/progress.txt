@@ -208,3 +208,45 @@ Started: 2026-02-10
 - All 4 MX message types share GrpHdr pattern but have different root elements and transaction structures
 
 ---
+## 2026-02-11 06:25:00 - PLAY-006
+- Implemented complete message formatting module in src/engine/formatter.ts
+- Created formatMt() function for MT message formatting:
+  - Parses 5-block structure with proper indentation
+  - Formats Block 3 and Block 5 nested tags on separate lines
+  - Formats Block 4 fields with 2-space indentation and proper alignment
+  - Handles multi-line field values correctly
+  - Normalizes line endings (CRLF → LF)
+- Created formatXml() function for XML message formatting:
+  - Proper indentation with configurable spacing (default: 2 spaces)
+  - Line breaks between elements for readability
+  - Preserves attributes on the same line as tags
+  - Handles self-closing tags, XML declarations, and comments
+  - Detects opening/closing tags and adjusts indentation level accordingly
+- Created formatJson() function as a wrapper around JSON.stringify with configurable indentation
+- Implemented 43 comprehensive tests covering:
+  - MT103, MT202, MT940 formatting with all block types
+  - XML formatting for ISO 20022 message structures (pacs.008, camt.053)
+  - Custom indentation levels (2-space, 4-space, 1-space)
+  - Edge cases: empty strings, whitespace-only, CRLF line endings, malformed blocks
+  - Content preservation tests to ensure formatting doesn't alter message data
+  - Multi-line field values and nested structures
+- All quality checks passing: build, lint, test (154 tests total), tsc
+
+**Files changed:**
+- src/engine/formatter.ts (new, 267 lines)
+- src/engine/formatter.test.ts (new, 468 lines)
+- scripts/ralph/prd.json (PLAY-006 marked as passes: true)
+
+**Learnings:**
+- TypeScript strict mode requires explicit null/undefined checks for regex match captures - use `if (!content) return block;` pattern
+- ESLint @typescript-eslint/restrict-plus-operands requires string type guards before concatenation - use `if (!char) continue;` to satisfy type checker
+- ESLint no-regex-spaces rule prefers `{4}` over counting spaces in regex patterns
+- Returning empty string for whitespace-only input is better UX than returning the input unchanged
+- MT block parsing requires tracking brace depth to handle nested braces in Block 3 and Block 5
+- XML formatting requires careful tracking of tag types (opening, closing, self-closing) to manage indentation levels
+- Using `const` instead of `let` for variables that don't change helps catch logic errors and improves code clarity
+- The `matchAll()` method returns an iterator of regex capture groups - always check if captured groups exist before using them
+- Testing both CRLF and LF line endings ensures cross-platform compatibility
+- Formatters should preserve exact content while only improving presentation - no data transformation
+
+---

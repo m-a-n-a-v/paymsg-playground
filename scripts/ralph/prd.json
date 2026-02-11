@@ -41,7 +41,7 @@
       "title": "Message formatter and pretty-printer",
       "description": "Create src/engine/formatter.ts with pretty-printing functions. For MT messages: format with proper block structure, indent fields within Block 4, align tag:value pairs. For XML messages: format with proper indentation (2-space), line breaks between elements, preserve attributes on same line. Also implement a compact JSON formatter for parsed message structures. Create formatMt(message: string): string, formatXml(xml: string): string, and formatJson(obj: any, indent?: number): string. Write tests verifying formatting preserves content while improving readability.",
       "priority": 6,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-007",
