@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Dark financial terminal theme */
+@theme {
+  --color-terminal-bg: #0a0e14;
+  --color-terminal-fg: #b3b1ad;
+  --color-terminal-accent: #39bae6;
+  --color-terminal-success: #7fd962;
+  --color-terminal-warning: #ffb454;
+  --color-terminal-error: #f07178;
+  --color-terminal-info: #59c2ff;
+}
+
+/* Custom base styles */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  background-color: var(--color-terminal-bg);
+  color: var(--color-terminal-fg);
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d3640;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3e4a58;
+}
