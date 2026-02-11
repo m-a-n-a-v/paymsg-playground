@@ -3,7 +3,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseMtMessage, parseMessage } from './parser';
+import {
+  parseMtMessage,
+  parseMxMessage,
+  parseMessage,
+  getElementByPath,
+  getElementNodeByPath,
+  getElementsByPath,
+} from './parser';
 
 describe('parseMtMessage', () => {
   describe('MT103 parsing', () => {
@@ -454,13 +461,361 @@ describe('parseMessage', () => {
     expect('block1' in result).toBe(true);
   });
 
-  it('should throw error for MX message (not yet implemented)', () => {
-    const mx = `<?xml version="1.0"?><Document></Document>`;
-    expect(() => parseMessage(mx)).toThrow('MX parsing not yet implemented');
+  it('should parse MX message', () => {
+    const mx = `<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.10"><FIToFICstmrCdtTrf><GrpHdr><MsgId>TEST123</MsgId></GrpHdr></FIToFICstmrCdtTrf></Document>`;
+    const result = parseMessage(mx);
+    expect(result).toBeDefined();
+    expect('document' in result).toBe(true);
   });
 
   it('should throw error for unknown format', () => {
     const unknown = 'This is not a valid message';
     expect(() => parseMessage(unknown)).toThrow('Unable to detect message format');
+  });
+});
+
+describe('parseMxMessage', () => {
+  describe('pacs.008 parsing', () => {
+    const pacs008Minimal = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.10" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <FIToFICstmrCdtTrf>
+    <GrpHdr>
+      <MsgId>MSGID-20260210-001</MsgId>
+      <CreDtTm>2026-02-10T14:30:00</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+      <InstgAgt>
+        <FinInstnId>
+          <BICFI>DEUTDEFFXXX</BICFI>
+        </FinInstnId>
+      </InstgAgt>
+      <InstdAgt>
+        <FinInstnId>
+          <BICFI>BNPAFRPPXXX</BICFI>
+        </FinInstnId>
+      </InstdAgt>
+    </GrpHdr>
+    <CdtTrfTxInf>
+      <PmtId>
+        <InstrId>INSTR-20260210-001</InstrId>
+        <EndToEndId>E2E-20260210-001</EndToEndId>
+      </PmtId>
+      <IntrBkSttlmAmt Ccy="EUR">1000.00</IntrBkSttlmAmt>
+      <IntrBkSttlmDt>2026-02-11</IntrBkSttlmDt>
+      <ChrgBr>SHAR</ChrgBr>
+      <Dbtr>
+        <Nm>ABC Corporation</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BICFI>DEUTDEFFXXX</BICFI>
+        </FinInstnId>
+      </DbtrAgt>
+      <CdtrAgt>
+        <FinInstnId>
+          <BICFI>BNPAFRPPXXX</BICFI>
+        </FinInstnId>
+      </CdtrAgt>
+      <Cdtr>
+        <Nm>XYZ Services</Nm>
+      </Cdtr>
+      <CdtrAcct>
+        <Id>
+          <IBAN>FR1420041010050500013M02606</IBAN>
+        </Id>
+      </CdtrAcct>
+    </CdtTrfTxInf>
+  </FIToFICstmrCdtTrf>
+</Document>`;
+
+    it('should parse pacs.008 message', () => {
+      const result = parseMxMessage(pacs008Minimal);
+      expect(result.namespace).toBe('urn:iso:std:iso:20022:tech:xsd:pacs.008.001.10');
+      expect(result.document).toBeDefined();
+      expect(result.root).toBeDefined();
+      expect(result.root.localName).toBe('Document');
+    });
+
+    it('should extract GrpHdr elements', () => {
+      const result = parseMxMessage(pacs008Minimal);
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/GrpHdr/MsgId')).toBe('MSGID-20260210-001');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/GrpHdr/CreDtTm')).toBe('2026-02-10T14:30:00');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/GrpHdr/NbOfTxs')).toBe('1');
+    });
+
+    it('should extract transaction details', () => {
+      const result = parseMxMessage(pacs008Minimal);
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/InstrId')).toBe('INSTR-20260210-001');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/EndToEndId')).toBe('E2E-20260210-001');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmAmt')).toBe('1000.00');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmDt')).toBe('2026-02-11');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/ChrgBr')).toBe('SHAR');
+    });
+
+    it('should extract party information', () => {
+      const result = parseMxMessage(pacs008Minimal);
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Nm')).toBe('ABC Corporation');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/IBAN')).toBe('DE89370400440532013000');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/Nm')).toBe('XYZ Services');
+      expect(getElementByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/IBAN')).toBe('FR1420041010050500013M02606');
+    });
+
+    it('should access element with attributes', () => {
+      const result = parseMxMessage(pacs008Minimal);
+      const amtElement = getElementNodeByPath(result, 'FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmAmt');
+      expect(amtElement).toBeDefined();
+      expect(amtElement?.textContent).toBe('1000.00');
+      expect(amtElement?.getAttribute('Ccy')).toBe('EUR');
+    });
+  });
+
+  describe('pacs.009 parsing', () => {
+    const pacs009Minimal = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.009.001.10">
+  <FICdtTrf>
+    <GrpHdr>
+      <MsgId>MSGID-20260210-001</MsgId>
+      <CreDtTm>2026-02-10T09:30:00Z</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+      <TtlIntrBkSttlmAmt Ccy="EUR">1000.00</TtlIntrBkSttlmAmt>
+      <IntrBkSttlmDt>2026-02-10</IntrBkSttlmDt>
+      <InstgAgt>
+        <FinInstnId>
+          <BICFI>DEUTDEFF</BICFI>
+        </FinInstnId>
+      </InstgAgt>
+      <InstdAgt>
+        <FinInstnId>
+          <BICFI>BNPAFRPP</BICFI>
+        </FinInstnId>
+      </InstdAgt>
+    </GrpHdr>
+    <CdtTrfTxInf>
+      <PmtId>
+        <InstrId>INSTR-20260210-001</InstrId>
+        <EndToEndId>E2E-20260210-001</EndToEndId>
+      </PmtId>
+      <IntrBkSttlmAmt Ccy="EUR">1000.00</IntrBkSttlmAmt>
+      <IntrBkSttlmDt>2026-02-10</IntrBkSttlmDt>
+    </CdtTrfTxInf>
+  </FICdtTrf>
+</Document>`;
+
+    it('should parse pacs.009 message', () => {
+      const result = parseMxMessage(pacs009Minimal);
+      expect(result.namespace).toBe('urn:iso:std:iso:20022:tech:xsd:pacs.009.001.10');
+      expect(result.root.localName).toBe('Document');
+    });
+
+    it('should extract GrpHdr elements', () => {
+      const result = parseMxMessage(pacs009Minimal);
+      expect(getElementByPath(result, 'FICdtTrf/GrpHdr/MsgId')).toBe('MSGID-20260210-001');
+      expect(getElementByPath(result, 'FICdtTrf/GrpHdr/CreDtTm')).toBe('2026-02-10T09:30:00Z');
+      expect(getElementByPath(result, 'FICdtTrf/GrpHdr/NbOfTxs')).toBe('1');
+    });
+
+    it('should extract transaction details', () => {
+      const result = parseMxMessage(pacs009Minimal);
+      expect(getElementByPath(result, 'FICdtTrf/CdtTrfTxInf/PmtId/InstrId')).toBe('INSTR-20260210-001');
+      expect(getElementByPath(result, 'FICdtTrf/CdtTrfTxInf/IntrBkSttlmAmt')).toBe('1000.00');
+      expect(getElementByPath(result, 'FICdtTrf/CdtTrfTxInf/IntrBkSttlmDt')).toBe('2026-02-10');
+    });
+  });
+
+  describe('camt.053 parsing', () => {
+    const camt053Minimal = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.10">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>STMT-20260210-001</MsgId>
+      <CreDtTm>2026-02-10T23:59:00Z</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>20260210-001</Id>
+      <CreDtTm>2026-02-10T23:59:00Z</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Svcr>
+          <FinInstnId>
+            <BICFI>DEUTDEFF</BICFI>
+          </FinInstnId>
+        </Svcr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">5000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-02-10</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">5000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-02-10</Dt>
+        </Dt>
+      </Bal>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>`;
+
+    it('should parse camt.053 message', () => {
+      const result = parseMxMessage(camt053Minimal);
+      expect(result.namespace).toBe('urn:iso:std:iso:20022:tech:xsd:camt.053.001.10');
+      expect(result.root.localName).toBe('Document');
+    });
+
+    it('should extract GrpHdr elements', () => {
+      const result = parseMxMessage(camt053Minimal);
+      expect(getElementByPath(result, 'BkToCstmrStmt/GrpHdr/MsgId')).toBe('STMT-20260210-001');
+      expect(getElementByPath(result, 'BkToCstmrStmt/GrpHdr/CreDtTm')).toBe('2026-02-10T23:59:00Z');
+    });
+
+    it('should extract statement details', () => {
+      const result = parseMxMessage(camt053Minimal);
+      expect(getElementByPath(result, 'BkToCstmrStmt/Stmt/Id')).toBe('20260210-001');
+      expect(getElementByPath(result, 'BkToCstmrStmt/Stmt/Acct/Id/IBAN')).toBe('DE89370400440532013000');
+      expect(getElementByPath(result, 'BkToCstmrStmt/Stmt/Acct/Ccy')).toBe('EUR');
+    });
+
+    it('should access multiple balance elements', () => {
+      const result = parseMxMessage(camt053Minimal);
+      const balances = getElementsByPath(result, 'BkToCstmrStmt/Stmt/Bal');
+      expect(balances).toHaveLength(2);
+
+      const openingBal = balances[0];
+      expect(openingBal?.querySelector('Tp CdOrPrtry Cd')?.textContent).toBe('OPBD');
+
+      const closingBal = balances[1];
+      expect(closingBal?.querySelector('Tp CdOrPrtry Cd')?.textContent).toBe('CLBD');
+    });
+  });
+
+  describe('camt.052 parsing', () => {
+    const camt052Minimal = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.10">
+  <BkToCstmrAcctRpt>
+    <GrpHdr>
+      <MsgId>RPT-20260210-INTERIM-001</MsgId>
+      <CreDtTm>2026-02-10T14:30:00Z</CreDtTm>
+    </GrpHdr>
+    <Rpt>
+      <Id>INTERIM-20260210-001</Id>
+      <CreDtTm>2026-02-10T14:30:00Z</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Svcr>
+          <FinInstnId>
+            <BICFI>DEUTDEFF</BICFI>
+          </FinInstnId>
+        </Svcr>
+      </Acct>
+    </Rpt>
+  </BkToCstmrAcctRpt>
+</Document>`;
+
+    it('should parse camt.052 message', () => {
+      const result = parseMxMessage(camt052Minimal);
+      expect(result.namespace).toBe('urn:iso:std:iso:20022:tech:xsd:camt.052.001.10');
+      expect(result.root.localName).toBe('Document');
+    });
+
+    it('should extract GrpHdr elements', () => {
+      const result = parseMxMessage(camt052Minimal);
+      expect(getElementByPath(result, 'BkToCstmrAcctRpt/GrpHdr/MsgId')).toBe('RPT-20260210-INTERIM-001');
+      expect(getElementByPath(result, 'BkToCstmrAcctRpt/GrpHdr/CreDtTm')).toBe('2026-02-10T14:30:00Z');
+    });
+
+    it('should extract report details', () => {
+      const result = parseMxMessage(camt052Minimal);
+      expect(getElementByPath(result, 'BkToCstmrAcctRpt/Rpt/Id')).toBe('INTERIM-20260210-001');
+      expect(getElementByPath(result, 'BkToCstmrAcctRpt/Rpt/Acct/Id/IBAN')).toBe('DE89370400440532013000');
+      expect(getElementByPath(result, 'BkToCstmrAcctRpt/Rpt/Acct/Ccy')).toBe('EUR');
+    });
+  });
+
+  describe('error handling', () => {
+    it('should throw error for malformed XML', () => {
+      const malformed = `<?xml version="1.0"?><Document><Unclosed>`;
+      expect(() => parseMxMessage(malformed)).toThrow('XML parsing error');
+    });
+
+    it('should throw error for empty XML', () => {
+      const empty = '';
+      expect(() => parseMxMessage(empty)).toThrow();
+    });
+  });
+
+  describe('getElementByPath edge cases', () => {
+    const simpleXml = `<?xml version="1.0"?>
+<Document xmlns="urn:test">
+  <Root>
+    <Child>Value</Child>
+  </Root>
+</Document>`;
+
+    it('should return null for non-existent path', () => {
+      const result = parseMxMessage(simpleXml);
+      expect(getElementByPath(result, 'Root/NonExistent')).toBeNull();
+    });
+
+    it('should return null for invalid deep path', () => {
+      const result = parseMxMessage(simpleXml);
+      expect(getElementByPath(result, 'Root/Child/NonExistent/Deep')).toBeNull();
+    });
+
+    it('should handle empty text content', () => {
+      const emptyXml = `<?xml version="1.0"?><Document xmlns="urn:test"><Root><Empty></Empty></Root></Document>`;
+      const result = parseMxMessage(emptyXml);
+      // Empty elements may return null or empty string
+      const value = getElementByPath(result, 'Root/Empty');
+      expect(value === '' || value === null).toBe(true);
+    });
+  });
+
+  describe('getElementsByPath', () => {
+    const multiXml = `<?xml version="1.0"?>
+<Document xmlns="urn:test">
+  <Root>
+    <Item>First</Item>
+    <Item>Second</Item>
+    <Item>Third</Item>
+  </Root>
+</Document>`;
+
+    it('should return all matching elements', () => {
+      const result = parseMxMessage(multiXml);
+      const items = getElementsByPath(result, 'Root/Item');
+      expect(items).toHaveLength(3);
+      expect(items[0]?.textContent).toBe('First');
+      expect(items[1]?.textContent).toBe('Second');
+      expect(items[2]?.textContent).toBe('Third');
+    });
+
+    it('should return empty array for non-existent path', () => {
+      const result = parseMxMessage(multiXml);
+      const items = getElementsByPath(result, 'Root/NonExistent');
+      expect(items).toHaveLength(0);
+    });
   });
 });

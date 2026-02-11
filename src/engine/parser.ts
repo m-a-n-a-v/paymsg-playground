@@ -4,6 +4,7 @@
 
 import type {
   MtMessage,
+  MxMessage,
   MtBlock1,
   MtBlock2,
   MtBlock3,
@@ -353,12 +354,131 @@ function parseFieldSubfields(field: MtField): MtField {
 }
 
 /**
- * Parse an MX (XML) message
- * (To be implemented in PLAY-005)
+ * Parse an MX (XML) message using browser's DOMParser
  */
-export function parseMxMessage(_message: string): ParsedMessage {
-  // Placeholder for PLAY-005
-  throw new Error('MX parsing not yet implemented');
+export function parseMxMessage(message: string): MxMessage {
+  // Parse XML using browser DOMParser
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(message, 'text/xml');
+
+  // Check for parsing errors
+  const parserError = doc.querySelector('parsererror');
+  if (parserError) {
+    throw new Error(`XML parsing error: ${parserError.textContent}`);
+  }
+
+  // Get root Document element
+  const root = doc.documentElement;
+
+  // Extract namespace from root element
+  const namespace = root.namespaceURI || '';
+
+  return {
+    namespace,
+    document: doc,
+    root,
+  };
+}
+
+/**
+ * Navigate parsed MX message by element path
+ * Path format: "GrpHdr/MsgId" or "CdtTrfTxInf/PmtId/InstrId"
+ * Returns the text content of the element, or null if not found
+ */
+export function getElementByPath(
+  message: MxMessage,
+  path: string
+): string | null {
+  const parts = path.split('/');
+  let current: Element | null = message.root;
+
+  for (const part of parts) {
+    if (!current) {
+      return null;
+    }
+
+    // Look for element by local name (ignoring namespace)
+    let found: Element | null = null;
+    for (let i = 0; i < current.children.length; i++) {
+      const child: Element = current.children[i] as Element;
+      if (child.localName === part) {
+        found = child;
+        break;
+      }
+    }
+
+    current = found;
+  }
+
+  return current?.textContent || null;
+}
+
+/**
+ * Get an element by path and return the Element itself (not just text content)
+ * Useful for accessing attributes or nested children
+ */
+export function getElementNodeByPath(
+  message: MxMessage,
+  path: string
+): Element | null {
+  const parts = path.split('/');
+  let current: Element | null = message.root;
+
+  for (const part of parts) {
+    if (!current) {
+      return null;
+    }
+
+    // Look for element by local name (ignoring namespace)
+    let found: Element | null = null;
+    for (let i = 0; i < current.children.length; i++) {
+      const child: Element = current.children[i] as Element;
+      if (child.localName === part) {
+        found = child;
+        break;
+      }
+    }
+
+    current = found;
+  }
+
+  return current;
+}
+
+/**
+ * Get all matching elements by path (for repeated elements like entries)
+ * Returns array of Elements
+ */
+export function getElementsByPath(
+  message: MxMessage,
+  path: string
+): Element[] {
+  const parts = path.split('/');
+  const lastPart = parts[parts.length - 1];
+  const parentPath = parts.slice(0, -1).join('/');
+
+  // Get parent element
+  let parent: Element | null;
+  if (parentPath === '') {
+    parent = message.root;
+  } else {
+    parent = getElementNodeByPath(message, parentPath);
+  }
+
+  if (!parent || !lastPart) {
+    return [];
+  }
+
+  // Find all children with matching local name
+  const results: Element[] = [];
+  for (let i = 0; i < parent.children.length; i++) {
+    const child: Element = parent.children[i] as Element;
+    if (child.localName === lastPart) {
+      results.push(child);
+    }
+  }
+
+  return results;
 }
 
 /**
