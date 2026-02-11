@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { parseMessage } from '../engine/parser';
 import { detectMessage } from '../engine/detector';
 import { validateMessage } from '../engine/validator';
-import type { ParsedMessage, DetectionResult, ValidationResult } from '../engine/types';
+import { translateMessage } from '../engine/translator';
+import type { ParsedMessage, DetectionResult, ValidationResult, TranslationResult } from '../engine/types';
 import { MessageFormat } from '../engine/types';
 
 interface EngineState {
@@ -12,6 +13,7 @@ interface EngineState {
   parsedMessage: ParsedMessage | null;
   detectionResult: DetectionResult | null;
   validationResult: ValidationResult | null;
+  translationResult: TranslationResult | null;
   error: string | null;
   isReadOnly: boolean;
 }
@@ -20,6 +22,7 @@ interface EngineActions {
   setInputMessage: (message: string) => void;
   parse: () => void;
   validate: () => Promise<void>;
+  translate: (targetFormat: MessageFormat) => Promise<void>;
   clear: () => void;
   detectFormat: (message: string) => DetectionResult;
 }
@@ -31,6 +34,7 @@ const initialState: EngineState = {
   parsedMessage: null,
   detectionResult: null,
   validationResult: null,
+  translationResult: null,
   error: null,
   isReadOnly: true,
 };
@@ -147,6 +151,56 @@ export function useEngine(): EngineState & EngineActions {
     }
   }, [state.inputMessage]);
 
+  const translate = useCallback(async (targetFormat: MessageFormat) => {
+    try {
+      if (!state.inputMessage.trim()) {
+        setState((prev) => ({
+          ...prev,
+          error: 'No message to translate',
+          translationResult: null,
+        }));
+        return;
+      }
+
+      const detection = detectMessage(state.inputMessage);
+      if (detection.format === MessageFormat.UNKNOWN) {
+        setState((prev) => ({
+          ...prev,
+          error: 'Unable to detect message format',
+          translationResult: null,
+        }));
+        return;
+      }
+
+      // Validate target format is different from source
+      if (detection.format === targetFormat) {
+        setState((prev) => ({
+          ...prev,
+          error: `Cannot translate to the same format (${targetFormat})`,
+          translationResult: null,
+        }));
+        return;
+      }
+
+      const result = await translateMessage(state.inputMessage, targetFormat);
+
+      setState((prev) => ({
+        ...prev,
+        translationResult: result,
+        detectionResult: detection,
+        error: null,
+      }));
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Unknown translation error';
+      setState((prev) => ({
+        ...prev,
+        error: errorMessage,
+        translationResult: null,
+      }));
+    }
+  }, [state.inputMessage]);
+
   const clear = useCallback(() => {
     setState(initialState);
   }, []);
@@ -156,6 +210,7 @@ export function useEngine(): EngineState & EngineActions {
     setInputMessage,
     parse,
     validate,
+    translate,
     clear,
     detectFormat,
   };

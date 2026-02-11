@@ -317,4 +317,110 @@ High Street 2
     expect(result.current.detectionResult).not.toBeNull();
     expect(result.current.detectionResult?.format).toBe(MessageFormat.MT);
   });
+
+  it('should translate MT103 to pacs.008 successfully', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(sampleMT103);
+    });
+
+    await act(async () => {
+      await result.current.translate(MessageFormat.MX);
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.translationResult).not.toBeNull();
+    expect(result.current.translationResult?.sourceFormat).toBe(MessageFormat.MT);
+    expect(result.current.translationResult?.targetFormat).toBe(MessageFormat.MX);
+    expect(result.current.translationResult?.translatedMessage).toContain('Document');
+  });
+
+  it('should translate pacs.008 to MT103 successfully', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(samplePacs008);
+    });
+
+    await act(async () => {
+      await result.current.translate(MessageFormat.MT);
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.translationResult).not.toBeNull();
+    expect(result.current.translationResult?.sourceFormat).toBe(MessageFormat.MX);
+    expect(result.current.translationResult?.targetFormat).toBe(MessageFormat.MT);
+    expect(result.current.translationResult?.translatedMessage).toContain('{1:');
+  });
+
+  it('should show error when translating empty message', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    await act(async () => {
+      await result.current.translate(MessageFormat.MX);
+    });
+
+    expect(result.current.error).toBe('No message to translate');
+    expect(result.current.translationResult).toBeNull();
+  });
+
+  it('should show error when translating invalid format', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage('invalid message format');
+    });
+
+    await act(async () => {
+      await result.current.translate(MessageFormat.MX);
+    });
+
+    expect(result.current.error).toBe('Unable to detect message format');
+    expect(result.current.translationResult).toBeNull();
+  });
+
+  it('should show error when translating to same format', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(sampleMT103);
+    });
+
+    await act(async () => {
+      await result.current.translate(MessageFormat.MT);
+    });
+
+    expect(result.current.error).toBe('Cannot translate to the same format (MT)');
+    expect(result.current.translationResult).toBeNull();
+  });
+
+  it('should clear translation result when clearing state', () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(sampleMT103);
+    });
+
+    act(() => {
+      result.current.clear();
+    });
+
+    expect(result.current.translationResult).toBeNull();
+  });
+
+  it('should detect format when translating', async () => {
+    const { result } = renderHook(() => useEngine());
+
+    act(() => {
+      result.current.setInputMessage(sampleMT103);
+    });
+
+    await act(async () => {
+      await result.current.translate(MessageFormat.MX);
+    });
+
+    expect(result.current.detectionResult).not.toBeNull();
+    expect(result.current.detectionResult?.format).toBe(MessageFormat.MT);
+  });
 });

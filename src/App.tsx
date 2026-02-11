@@ -5,11 +5,12 @@ import Toolbar from './components/Toolbar';
 import StatusBar from './components/StatusBar';
 import { Editor } from './components/Editor';
 import { ValidationPanel } from './components/ValidationPanel';
+import { TranslationPanel } from './components/TranslationPanel';
 import { samples } from './samples/messages';
 import { MessageFormat } from './engine/types';
 import { useEngine } from './hooks/useEngine';
 
-type OutputMode = 'editor' | 'validation';
+type OutputMode = 'editor' | 'validation' | 'translation';
 
 function App() {
   const engine = useEngine();
@@ -59,15 +60,36 @@ function App() {
     setOutputMode('validation');
   }, [engine]);
 
-  const handleTranslate = () => {
-    // Placeholder for PLAY-015
-    console.log('Translation functionality will be implemented in PLAY-015');
-  };
+  const handleTranslate = useCallback(() => {
+    // Determine target format based on current detection
+    if (!engine.detectionResult) {
+      return;
+    }
+    const targetFormat = engine.detectionResult.format === MessageFormat.MT
+      ? MessageFormat.MX
+      : MessageFormat.MT;
+
+    void engine.translate(targetFormat);
+    setOutputMode('translation');
+  }, [engine]);
 
   const handleFormat = () => {
     // Placeholder for format action
     console.log('Format functionality will be implemented');
   };
+
+  const handleCopyOutput = useCallback(() => {
+    if (engine.translationResult?.translatedMessage) {
+      void navigator.clipboard.writeText(engine.translationResult.translatedMessage);
+    }
+  }, [engine.translationResult]);
+
+  const handleSwapInputOutput = useCallback(() => {
+    if (engine.translationResult?.translatedMessage) {
+      engine.setInputMessage(engine.translationResult.translatedMessage);
+      setOutputMode('editor');
+    }
+  }, [engine]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -81,6 +103,9 @@ function App() {
       } else if (isMod && event.shiftKey && event.key === 'V') {
         event.preventDefault();
         handleValidate();
+      } else if (isMod && event.shiftKey && event.key === 'T') {
+        event.preventDefault();
+        handleTranslate();
       }
     };
 
@@ -88,7 +113,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleParse, handleValidate]);
+  }, [handleParse, handleValidate, handleTranslate]);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-terminal-bg)] text-[var(--color-terminal-fg)]">
@@ -122,7 +147,7 @@ function App() {
         <div className="flex flex-col">
           <div className="border-b border-zinc-800 px-4 py-2 bg-zinc-900">
             <span className="text-sm font-medium text-zinc-300">
-              {outputMode === 'validation' ? 'Validation' : 'Output'}
+              {outputMode === 'validation' ? 'Validation' : outputMode === 'translation' ? 'Translation' : 'Output'}
             </span>
           </div>
           <div className="flex-1 overflow-hidden">
@@ -133,6 +158,12 @@ function App() {
               </div>
             ) : outputMode === 'validation' ? (
               <ValidationPanel result={engine.validationResult ?? undefined} />
+            ) : outputMode === 'translation' ? (
+              <TranslationPanel
+                result={engine.translationResult ?? undefined}
+                onCopyOutput={handleCopyOutput}
+                onSwapInputOutput={handleSwapInputOutput}
+              />
             ) : (
               <Editor
                 value={engine.outputContent}
