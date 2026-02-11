@@ -125,7 +125,7 @@
       "title": "Keyboard shortcuts, accessibility, and polish",
       "description": "Add keyboard shortcuts: Ctrl/Cmd+Enter (parse), Ctrl/Cmd+Shift+V (validate), Ctrl/Cmd+Shift+T (translate), Ctrl/Cmd+Shift+F (format), Ctrl/Cmd+K (clear). Show keyboard shortcuts in button tooltips. Add loading states for async operations (spec loading). Add error boundaries for graceful error handling. Ensure proper ARIA labels on all interactive elements. Add tab navigation support. Ensure color contrast meets WCAG AA. Add a keyboard shortcuts help dialog (Ctrl/Cmd+?). Add smooth transitions between panels. Polish the overall UI: consistent spacing, proper truncation of long text, responsive behavior.",
       "priority": 18,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-019",
