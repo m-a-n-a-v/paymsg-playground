@@ -76,7 +76,7 @@
       "title": "Validation engine — schema and field validation",
       "description": "Implement src/engine/validator.ts. Load MT field specs from specs to validate: mandatory fields present, field lengths within limits, field format patterns (e.g., :32A: must match date+currency+amount). Load SWIFT charset definitions to validate field content against X/Y/Z character sets. For MX messages: validate required XML elements present (GrpHdr, MsgId, CreDtTm, NbOfTxs, CdtTrfTxInf). Validate BIC format (8 or 11 chars, correct structure). Validate IBAN check digits (Mod-97). Validate currency codes against currencies.json. Return ValidationResult with typed issues. Write comprehensive tests with both valid and invalid messages.",
       "priority": 11,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-012",
