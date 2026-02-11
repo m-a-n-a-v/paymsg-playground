@@ -47,3 +47,39 @@ Started: 2026-02-10
 - Using monospace font family for financial terminal aesthetic
 
 ---
+## 2026-02-11 06:02:00 - PLAY-002
+- Created scripts/copy-specs.sh to automate copying spec files from paymsg-specs sibling repo
+- Successfully copied 18 JSON spec files into public/specs/ directory structure:
+  - Reference data: currencies.json (170+ currencies), countries.json (240+ countries), iban_formats.json (80+ IBAN formats), bic_spec.json, swift_charsets.json (X/Y/Z character sets)
+  - MT specs: mt103.json, mt202.json, mt940.json, mt942.json, block_structure.json
+  - Mappings: mt103_pacs008.json, mt202_pacs009.json, mt940_camt053.json, mt942_camt052.json
+  - Validation rules: pacs008_rules.json, pacs009_rules.json, camt052_rules.json, camt053_rules.json
+- Implemented src/specs/loader.ts with comprehensive TypeScript interfaces and typed loader functions:
+  - Reference data types: Currency, Country, IbanFormat, BicSpec, SwiftCharsets
+  - MT spec types: MtSpec, MtField, MtBlockSpec with mandatory/optional status
+  - Mapping types: MappingSpec, FieldMapping with transform types (direct, split, merge, lookup, derived, conditional)
+  - Validation rule types: RulesSpec, ValidationRule with severity levels
+  - Loader functions: loadCurrencies(), loadCountries(), loadIbanFormats(), loadBicSpec(), loadSwiftCharsets(), loadMtSpec(type), loadBlockStructure(), loadMapping(pair), loadRules(type)
+  - Helper functions: getCurrency(), getCountry(), getIbanFormat(), isValidCurrency(), isValidCountry()
+- Created comprehensive test suite with 23 unit tests covering all loader functions
+- Set up test environment with fetch mock using Node.js file system for reading spec files in test environment
+- Added @types/node to dev dependencies for test environment
+- All quality checks passing: build, lint, test, tsc
+
+**Files changed:**
+- scripts/copy-specs.sh (new)
+- public/specs/ (18 new JSON files in subdirectories)
+- src/specs/loader.ts, src/specs/loader.test.ts (new)
+- src/test/setup.ts (added fetch mock for testing)
+- tsconfig.json (added node types)
+- package.json, package-lock.json (@types/node)
+
+**Learnings:**
+- Fetch API in Node.js test environment requires mocking with file system reads
+- TypeScript strict mode catches potential issues with Response.json() return type - needed explicit type assertion
+- ESLint no-base-to-string rule requires careful handling of URL/Request objects in string context
+- The block_structure.json uses "description" field instead of "version" at root level
+- Organizing specs by category (reference, mt-specs, mappings, rules) makes the codebase more maintainable
+- Using a generic loadJson<T> helper with type parameter ensures type safety across all loaders
+
+---

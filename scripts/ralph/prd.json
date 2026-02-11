@@ -13,7 +13,7 @@
       "title": "Copy specs data and implement spec loader",
       "description": "Create a script (scripts/copy-specs.sh) that copies needed JSON files from ../paymsg-specs into public/specs/ directory. Copy: reference/ (currencies, countries, iban_formats, bic_spec, swift_charsets), mt-specs/ (mt103, mt202, mt940, mt942, block_structure), mappings/ (all 4 mapping files), rules/ (all 4 rule files). Run the script to populate public/specs/. Implement src/specs/loader.ts with typed functions: loadCurrencies(), loadCountries(), loadIbanFormats(), loadMtSpec(type), loadMapping(pair), loadRules(type). Define TypeScript interfaces matching the JSON schemas. Add unit tests for the loader using Vitest. Ensure all specs load correctly.",
       "priority": 2,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-003",
