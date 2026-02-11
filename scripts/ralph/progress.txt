@@ -250,3 +250,87 @@ Started: 2026-02-10
 - Formatters should preserve exact content while only improving presentation - no data transformation
 
 ---
+## 2026-02-11 06:32:00 - PLAY-007
+- Implemented complete sample messages collection in src/samples/messages.ts
+- Created 9 realistic sample messages sourced from paymsg-specs testdata:
+  - 5 MT messages: MT103 SEPA EUR, MT103 USD wire with intermediary, MT202 interbank, MT940 daily statement (6 entries), MT942 intraday report
+  - 4 MX messages: pacs.008 SEPA credit, pacs.009 FI transfer, camt.053 daily statement (3 entries), camt.052 interim report (4 entries)
+- Each sample includes: id, label, description, format, messageType, and full message content
+- All samples use realistic financial data with proper IBANs, BICs, amounts, and references
+- Created comprehensive test suite (26 tests) verifying:
+  - All samples parse without errors
+  - Correct format and type detection
+  - Parsed structure validation for key fields
+  - Message content quality (amounts, IBANs, BICs, currencies)
+- All quality checks passing: build, lint, test (180 tests total), tsc
+
+**Files changed:**
+- src/samples/messages.ts (new, 1044 lines total for both files)
+- src/samples/messages.test.ts (new)
+- scripts/ralph/prd.json (PLAY-007 marked as passes: true)
+
+**Learnings:**
+- TypeScript strict mode requires bracket notation for index signatures: use `obj?.['field']` instead of `obj?.field` when accessing Record<string, any> subfields
+- Adding proper type guards (`if ('block1' in parsed && parsed.block4)`) prevents TypeScript undefined access errors
+- Sample messages should be comprehensive enough to test all parser features (multi-line fields, compound fields, multiple entries)
+- Using realistic data from the sibling paymsg-specs repo ensures samples align with actual message standards
+- Each MT message type has distinct characteristics: MT103 has parties and intermediaries, MT202 is simpler for FI-to-FI, MT940/MT942 focus on statement entries
+- MX messages have more verbose XML structure but clearer semantic naming than MT messages
+- Good sample descriptions help users understand the use case and message characteristics at a glance
+- Test coverage should verify both parsing success and content quality (e.g., proper decimal separators, valid BICs/IBANs)
+
+---
+## 2026-02-11 06:38:00 - PLAY-008
+- Implemented complete CodeMirror 6 editor component with syntax highlighting
+- Created src/components/mtLang.ts with custom MT syntax highlighting extension:
+  - StreamLanguage-based parser for SWIFT MT message structure
+  - Color-coded syntax: block delimiters (yellow), field tags (cyan), amounts (green), currencies (orange), dates (purple), BICs (blue)
+  - Pattern matching for MT-specific elements: :TAG:, {BLOCK:}, amounts with comma decimals, currency codes, dates, BICs
+- Implemented src/components/Editor.tsx with full-featured CodeMirror integration:
+  - Support for both 'mt' and 'xml' language modes with automatic syntax switching
+  - Dark theme using @codemirror/theme-one-dark
+  - Basic editor features: line numbers, bracket matching, history, search, autocomplete
+  - Controlled component with value/onChange props
+  - Read-only mode support for output display
+  - Placeholder support for empty editors
+  - Line wrapping enabled for long messages
+  - Responsive container that fills parent element
+- Added comprehensive CSS styling in globals.css:
+  - Editor container styles for proper layout
+  - MT syntax highlighting color classes matching the terminal theme
+  - Monospace font and proper line height for code readability
+- Created comprehensive test suite with 25 tests covering:
+  - Component rendering with various props
+  - Language mode switching (MT/XML)
+  - Read-only vs editable modes
+  - Value updates and controlled component behavior
+  - MT syntax highlighting with realistic message samples
+  - XML syntax highlighting with ISO 20022 messages
+  - Edge cases: long content, special characters, unicode, unmounting
+  - Integration scenarios with complete MT103 and pacs.008 messages
+- Installed @codemirror/theme-one-dark package for dark theme support
+- All quality checks passing: build, lint, test (205 tests total), tsc
+
+**Files changed:**
+- package.json, package-lock.json (@codemirror/theme-one-dark added)
+- src/components/mtLang.ts (new, 87 lines)
+- src/components/Editor.tsx (new, 155 lines)
+- src/components/Editor.test.tsx (new, 214 lines)
+- src/styles/globals.css (+45 lines for editor and MT syntax styling)
+- scripts/ralph/prd.json (PLAY-008 marked as passes: true)
+
+**Learnings:**
+- CodeMirror 6 uses a modular architecture - no single 'codemirror' package, must import from individual @codemirror/* packages
+- StreamLanguage.define() is the easiest way to create custom syntax highlighting for non-standard formats like MT messages
+- Basic setup must be manually assembled from individual extensions (lineNumbers, history, bracketMatching, etc.)
+- React integration requires two useEffect hooks: one for editor creation/recreation, one for controlled value updates
+- Must use useCallback for onChange handler to prevent unnecessary editor recreation
+- The editor should NOT be recreated when value changes - only when language, readOnly, or placeholder changes
+- ESLint react-hooks/exhaustive-deps can be safely disabled when we intentionally exclude onChange from dependencies (it's memoized with useCallback)
+- Using ViewUpdate type from @codemirror/view provides proper type safety for update listeners
+- EditorView.lineWrapping is important for financial messages which can have long field values
+- CSS custom properties from the terminal theme integrate well with CodeMirror's oneDark theme
+- Testing CodeMirror components requires checking for presence of .cm-editor and .cm-content DOM elements
+- The component correctly handles language switching without memory leaks (old editor is destroyed before creating new one)
+
+---

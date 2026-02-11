@@ -48,14 +48,14 @@
       "title": "Sample messages collection",
       "description": "Create src/samples/messages.ts with built-in sample messages. Include at least 9 samples: MT103 SEPA EUR transfer, MT103 USD wire with intermediary, MT202 interbank transfer, MT940 end-of-day statement (3+ entries), MT942 intraday report, pacs.008 customer credit transfer, pacs.009 FI credit transfer, camt.053 bank statement, camt.052 interim report. Each sample should have: id, label, description, format (MT/MX), messageType, and the actual message content as a string. Source realistic content from ../paymsg-specs/testdata/ but include inline. Export as a typed array. Write a simple test verifying all samples parse without errors.",
       "priority": 7,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-008",
       "title": "CodeMirror editor component with syntax highlighting",
       "description": "Create src/components/Editor.tsx using CodeMirror 6. Install @codemirror/state, @codemirror/view, @codemirror/lang-xml, @codemirror/theme-one-dark, and @codemirror/language. Set up the editor with: dark theme (oneDark), line numbers, bracket matching, XML language support for MX messages. Create a basic MT syntax highlighting extension that colors :TAG: patterns in cyan, block delimiters {1: etc in yellow, and amounts in green. Support controlled value (value prop + onChange callback). Support read-only mode for output. The editor should fill its container and be responsive. Accept a language prop to switch between MT and XML modes.",
       "priority": 8,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-009",
