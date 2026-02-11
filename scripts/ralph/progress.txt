@@ -387,3 +387,65 @@ Started: 2026-02-10
 - Component composition (Header + Toolbar + Content + StatusBar) creates clean, maintainable layout structure
 
 ---
+## 2026-02-11 06:52:30 - PLAY-010
+- Implemented complete parse action with structured JSON output display
+- Created src/hooks/useEngine.ts with comprehensive engine state management:
+  - EngineState interface tracking input, output, parsed messages, detection results, errors
+  - parse() function that detects format, parses message, and displays JSON output
+  - clear() function to reset all state
+  - setInputMessage() with automatic format detection
+  - detectFormat() helper for manual detection
+- Added JSON syntax highlighting support to CodeMirror editor:
+  - Installed @codemirror/lang-javascript package
+  - Updated Editor component to support 'json' language mode
+  - Extended language prop type to include 'mt' | 'xml' | 'json'
+- Integrated useEngine hook into App.tsx:
+  - Replaced local state management with useEngine hook
+  - Wired Parse button to engine.parse() function
+  - Display parsed output as formatted JSON in read-only editor
+  - Show errors in styled red panel with clear error messaging
+  - Auto-detect message format and update input editor language mode
+  - Update output language based on engine state
+- Implemented keyboard shortcuts:
+  - Ctrl/Cmd+Enter triggers parse action
+  - Event listener with proper cleanup in useEffect
+- Enhanced Clear button functionality:
+  - Resets all engine state via engine.clear()
+  - Clears sample selection and language modes
+- Added comprehensive error handling:
+  - "No message to parse" for empty input
+  - "Unable to detect message format" for invalid messages
+  - Graceful handling of parser exceptions with error messages
+  - Visual error display with red-themed panel
+- Created extensive test suite:
+  - 13 tests for useEngine hook covering all operations
+  - Updated App tests with parse functionality validation
+  - Tests for error states, format detection, JSON output
+  - Total test count: 249 tests passing
+- All quality checks passing:
+  - ✅ npm run build (680KB bundle, within acceptable range)
+  - ✅ npm run lint (no errors, strict ESLint rules)
+  - ✅ npm run test (249 tests, 100% pass rate)
+  - ✅ npx tsc --noEmit (strict type checking)
+
+**Files changed:**
+- package.json, package-lock.json (@codemirror/lang-javascript added)
+- src/hooks/useEngine.ts, src/hooks/useEngine.test.ts (new)
+- src/components/Editor.tsx (added JSON language support)
+- src/App.tsx (integrated useEngine hook, keyboard shortcuts, error display)
+- src/App.test.tsx (updated tests for parse functionality)
+- scripts/ralph/prd.json (PLAY-010 marked as passes: true)
+
+**Learnings:**
+- CodeMirror @codemirror/lang-javascript exports `javascript()` function, not `json()` - the javascript function handles both JS and JSON syntax
+- React hooks require careful dependency management - useCallback prevents unnecessary re-renders and satisfies exhaustive-deps rule
+- ESLint @typescript-eslint/no-unnecessary-condition catches truthiness checks on non-optional types
+- TypeScript strict mode requires explicit typing for variables in tests when using act() - use `let detection: DetectionResult | undefined`
+- Using MessageFormat enum instead of string literal 'UNKNOWN' prevents unsafe enum comparison errors
+- Error display UX: showing errors in a separate styled panel is better than mixing with editor output
+- Keyboard shortcuts need proper event.preventDefault() to avoid browser default behavior
+- Parse button should handle three states: empty input, undetectable format, and parse errors
+- JSON output from engine should be pre-formatted with proper indentation (JSON.stringify with 2-space indent)
+- useEngine hook pattern separates business logic from UI, making both more testable and maintainable
+
+---

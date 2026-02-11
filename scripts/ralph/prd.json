@@ -69,7 +69,7 @@
       "title": "Parse action — parse and display structured output",
       "description": "Wire up the Parse button in the toolbar. When clicked: detect message format (MT/MX), parse the message from the input editor, display the parsed structure as formatted JSON in the output panel. Show the detected message type in the status bar. Handle parse errors gracefully — display error messages in the output panel with red styling. Use the useEngine hook (src/hooks/useEngine.ts) to manage engine state. The output panel should use a read-only CodeMirror editor with JSON syntax. Implement a clear button to reset both panels. Add keyboard shortcut Ctrl/Cmd+Enter to trigger parse.",
       "priority": 10,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-011",
