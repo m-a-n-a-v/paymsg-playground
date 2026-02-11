@@ -90,7 +90,7 @@
       "title": "Translation engine — MT103 ↔ pacs.008",
       "description": "Implement src/engine/translator.ts with MT103 → pacs.008 and pacs.008 → MT103 translation. Load mapping definitions from specs/mappings/mt103_pacs008.json. Implement transform functions: direct (copy value), split (field 32A → date + currency + amount), merge (reverse of split), lookup (charge bearer: SHA↔SHAR, OUR↔DEBT, BEN↔CRED), derived (generate MsgId, CreDtTm), conditional (EndToEndId from UETR or field 20). Handle BIC normalization (BIC8↔BIC11). Handle amount decimal format (comma↔period). Handle date format (YYMMDD↔YYYY-MM-DD). Track data loss warnings. Return TranslationResult with translated message and warnings. Write tests for both directions using sample messages.",
       "priority": 13,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-014",

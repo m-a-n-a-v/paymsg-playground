@@ -558,3 +558,70 @@ Started: 2026-02-10
 - Using Lucide React icons (AlertCircle, AlertTriangle, Info, CheckCircle) creates consistent iconography
 
 ---
+## 2026-02-11 07:21:00 - PLAY-013
+- Implemented complete MT103 ↔ pacs.008 translation engine in src/engine/translator.ts
+- Created translateMessage() as main entry point for bidirectional translation
+- Implemented MT103 → pacs.008 translation (translateMt103ToPacs008):
+  - Field mapping using specs from mt103_pacs008.json
+  - Date conversion: YYMMDD → YYYY-MM-DD with century inference (YY≥50 = 19YY, YY<50 = 20YY)
+  - Amount conversion: comma decimal (1234,56) → period decimal (1234.56)
+  - Charge bearer code lookup: SHA→SHAR, OUR→DEBT, BEN→CRED
+  - Field 32A split transformation: single field → date + currency + amount elements
+  - Field 50K/59 parsing: account line detection (starts with /), name extraction, address lines
+  - IBAN detection and appropriate XML element selection (IBAN vs Othr/Id)
+  - UETR handling: Block 3 tag 121 → UETR element, fallback to field 20 for EndToEndId
+  - Field 70 concatenation: multi-line remittance info joined with spaces
+  - XML generation with proper escaping for special characters (&, <, >, ", ')
+  - GrpHdr generation with MsgId, CreDtTm, NbOfTxs, CtrlSum
+  - Data loss warning generation for MT-only fields (53A, 54A, 55A correspondent fields)
+- Implemented pacs.008 → MT103 translation (translatePacs008ToMt103):
+  - XML element navigation helpers: getElement() for single elements, getElements() for repeated elements
+  - Date conversion: YYYY-MM-DD → YYMMDD
+  - Amount conversion: period decimal → comma decimal
+  - Reverse charge bearer lookup: SHAR→SHA, DEBT→OUR, CRED→BEN
+  - Debtor/Creditor name and address extraction from XML elements
+  - IBAN and non-IBAN account handling
+  - UETR to Block 3 tag 121 mapping
+  - InstrId truncation to 16 chars for MT field 20 with warning generation
+  - MT message structure generation: Block 1, Block 2, optional Block 3, Block 4 with all fields, Block 5
+- Updated TranslationResult interface to include:
+  - translatedMessage (the output message string)
+  - sourceFormat, targetFormat (MessageFormat enums)
+  - sourceType, targetType (MessageType enums)
+  - warnings array (DataLossWarning[])
+- Updated MappingSpec interface to include optional mt_only_fields and mx_only_fields arrays
+- Created comprehensive test suite with 46 tests covering:
+  - MT103 → pacs.008: field mapping, date/amount conversion, charge bearer lookup, IBAN detection, XML structure validation, special character escaping
+  - pacs.008 → MT103: element extraction, date/amount conversion, reverse charge bearer lookup, account handling, UETR mapping, truncation warnings
+  - Round-trip translation: key field preservation through MT→MX→MT cycle
+  - Error handling: same format translation rejection, unsupported message type errors
+  - Edge cases: missing UETR, long identifiers, non-IBAN accounts, minimal messages
+- All quality checks passing:
+  - ✅ npm run build (695KB bundle)
+  - ✅ npm run lint (strict ESLint with no warnings)
+  - ✅ npm run test (335 tests passing, 9 skipped)
+  - ✅ npx tsc --noEmit (strict TypeScript checks)
+
+**Files changed:**
+- src/engine/translator.ts (new, 676 lines)
+- src/engine/translator.test.ts (new, 557 lines)
+- src/engine/types.ts (updated TranslationResult interface)
+- src/specs/loader.ts (added mt_only_fields and mx_only_fields to MappingSpec)
+- scripts/ralph/prd.json (PLAY-013 marked as passes: true)
+
+**Learnings:**
+- TypeScript strict mode requires importing enums as values, not types, when used in comparisons or as property values
+- Array element access (lines[0]) returns `T | undefined` in strict mode - requires explicit checks before use
+- Template literals with numbers require String() conversion to satisfy @typescript-eslint/restrict-template-expressions
+- Optional chaining on guaranteed non-null values triggers lint errors - better to use explicit null checks
+- DataLossCategory enum should be imported as a value for comparison, not just as a type
+- MT Block 3 is parsed as MtBlock3 with a tags Record, not as a raw string - access via mt.block3?.tags
+- BIC extraction from fields like 52A/57A requires handling optional account lines (last line is the BIC)
+- XML special characters must be escaped: &→&amp;, <→&lt;, >→&gt;, "→&quot;, '→&apos;
+- IBAN format detection regex: /^[A-Z]{2}\d{2}[A-Z0-9]+$/ (2 letter country + 2 digit check + alphanumeric)
+- MT date conversion century rule: YY >= 50 uses 1900s, YY < 50 uses 2000s
+- Round-trip translation shows key field preservation: field 20, 32A, 50K, 59, 70, 71A all survive the cycle
+- Translation warnings help users understand data loss: truncation, no equivalent, precision loss categories
+- Using enums (DataLossCategory.TRUNCATION) instead of string literals improves type safety and prevents typos
+
+---
