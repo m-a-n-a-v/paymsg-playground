@@ -69,14 +69,42 @@ describe('App', () => {
     expect(editors.length).toBe(2); // Input and output editors
   });
 
-  it('handles Parse button click', () => {
-    const { container } = render(<App />);
+  it('handles Parse button click - shows error for empty message', () => {
+    render(<App />);
 
     fireEvent.click(screen.getByText('Parse'));
 
-    // Check that output editor exists (content is in CodeMirror which doesn't expose text directly)
-    const editors = container.querySelectorAll('.cm-editor');
-    expect(editors.length).toBe(2);
+    // Should show error for empty message
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('No message to parse')).toBeInTheDocument();
+  });
+
+  it('parses MT103 message and shows JSON output', () => {
+    render(<App />);
+
+    // Load MT103 sample
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'mt103-sepa-eur' } });
+
+    // Parse
+    fireEvent.click(screen.getByText('Parse'));
+
+    // Should detect and parse the message (exact content is in CodeMirror, so we just check no error)
+    expect(screen.queryByText('Error')).not.toBeInTheDocument();
+  });
+
+  it('parses pacs.008 message successfully', () => {
+    render(<App />);
+
+    // Load pacs.008 sample
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'pacs008-sepa' } });
+
+    // Parse
+    fireEvent.click(screen.getByText('Parse'));
+
+    // Should parse without error
+    expect(screen.queryByText('Error')).not.toBeInTheDocument();
   });
 
   it('handles Validate button click', () => {

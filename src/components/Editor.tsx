@@ -12,6 +12,7 @@ import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { xml } from '@codemirror/lang-xml';
+import { javascript } from '@codemirror/lang-javascript';
 import type { ViewUpdate } from '@codemirror/view';
 import { mt } from './mtLang';
 
@@ -22,8 +23,8 @@ export interface EditorProps {
   /** Callback when content changes */
   onChange?: (value: string) => void;
 
-  /** Language mode: 'mt' for SWIFT MT, 'xml' for MX messages */
-  language?: 'mt' | 'xml';
+  /** Language mode: 'mt' for SWIFT MT, 'xml' for MX messages, 'json' for structured output */
+  language?: 'mt' | 'xml' | 'json';
 
   /** Whether the editor is read-only */
   readOnly?: boolean;
@@ -86,7 +87,7 @@ export function Editor({
     const extensions: Extension[] = [
       ...basicSetup,
       oneDark,
-      language === 'xml' ? xml() : mt(),
+      language === 'xml' ? xml() : language === 'json' ? javascript() : mt(),
       EditorView.lineWrapping,
       EditorView.editable.of(!readOnly),
       EditorState.readOnly.of(readOnly),

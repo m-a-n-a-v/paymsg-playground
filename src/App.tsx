@@ -1,77 +1,85 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './styles/globals.css';
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
 import StatusBar from './components/StatusBar';
 import { Editor } from './components/Editor';
 import { samples } from './samples/messages';
-import { detectMessage } from './engine/detector';
-import { MessageFormat, MessageType } from './engine/types';
+import { MessageFormat } from './engine/types';
+import { useEngine } from './hooks/useEngine';
 
 function App() {
-  const [inputValue, setInputValue] = useState('');
-  const [outputValue, setOutputValue] = useState('');
+  const engine = useEngine();
   const [selectedSample, setSelectedSample] = useState('');
-  const [detectedFormat, setDetectedFormat] = useState<MessageFormat | undefined>(undefined);
-  const [detectedType, setDetectedType] = useState<MessageType | undefined>(undefined);
   const [inputLanguage, setInputLanguage] = useState<'mt' | 'xml'>('mt');
-  const [outputLanguage, setOutputLanguage] = useState<'mt' | 'xml'>('mt');
+  const [outputLanguage, setOutputLanguage] = useState<'mt' | 'xml' | 'json'>('json');
 
-  const handleSampleSelect = (sampleId: string) => {
-    setSelectedSample(sampleId);
-    const sample = samples.find((s: { id: string }) => s.id === sampleId);
-    if (sample) {
-      setInputValue(sample.content);
-      const detection = detectMessage(sample.content);
-      setDetectedFormat(detection.format);
-      setDetectedType(detection.messageType);
-      setInputLanguage(detection.format === MessageFormat.MX ? 'xml' : 'mt');
+  // Update input language when detection changes
+  useEffect(() => {
+    if (engine.detectionResult) {
+      setInputLanguage(engine.detectionResult.format === MessageFormat.MX ? 'xml' : 'mt');
     }
-  };
+  }, [engine.detectionResult]);
 
-  const handleClear = () => {
-    setInputValue('');
-    setOutputValue('');
+  // Update output language based on content
+  useEffect(() => {
+    setOutputLanguage(engine.outputLanguage);
+  }, [engine.outputLanguage]);
+
+  const handleSampleSelect = useCallback(
+    (sampleId: string) => {
+      setSelectedSample(sampleId);
+      const sample = samples.find((s: { id: string }) => s.id === sampleId);
+      if (sample !== undefined) {
+        engine.setInputMessage(sample.content);
+      }
+    },
+    [engine]
+  );
+
+  const handleClear = useCallback(() => {
+    engine.clear();
     setSelectedSample('');
-    setDetectedFormat(undefined);
-    setDetectedType(undefined);
     setInputLanguage('mt');
-    setOutputLanguage('mt');
-  };
+    setOutputLanguage('json');
+  }, [engine]);
 
-  const handleParse = () => {
-    // Placeholder for PLAY-010
-    setOutputValue('Parse functionality will be implemented in PLAY-010');
-  };
+  const handleParse = useCallback(() => {
+    engine.parse();
+  }, [engine]);
 
   const handleValidate = () => {
     // Placeholder for PLAY-012
-    setOutputValue('Validation functionality will be implemented in PLAY-012');
+    console.log('Validation functionality will be implemented in PLAY-012');
   };
 
   const handleTranslate = () => {
     // Placeholder for PLAY-015
-    setOutputValue('Translation functionality will be implemented in PLAY-015');
+    console.log('Translation functionality will be implemented in PLAY-015');
   };
 
   const handleFormat = () => {
     // Placeholder for format action
-    setOutputValue('Format functionality will be implemented');
+    console.log('Format functionality will be implemented');
   };
 
-  const handleInputChange = (value: string) => {
-    setInputValue(value);
-    // Auto-detect format on input change
-    if (value.trim()) {
-      const detection = detectMessage(value);
-      setDetectedFormat(detection.format);
-      setDetectedType(detection.messageType);
-      setInputLanguage(detection.format === MessageFormat.MX ? 'xml' : 'mt');
-    } else {
-      setDetectedFormat(undefined);
-      setDetectedType(undefined);
-    }
-  };
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl/Cmd modifier
+      const isMod = event.ctrlKey || event.metaKey;
+
+      if (isMod && event.key === 'Enter') {
+        event.preventDefault();
+        handleParse();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleParse]);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-terminal-bg)] text-[var(--color-terminal-fg)]">
@@ -94,8 +102,8 @@ function App() {
           </div>
           <div className="flex-1 overflow-hidden">
             <Editor
-              value={inputValue}
-              onChange={handleInputChange}
+              value={engine.inputMessage}
+              onChange={engine.setInputMessage}
               language={inputLanguage}
               placeholder="Paste a SWIFT MT or ISO 20022 MX message here..."
             />
@@ -107,18 +115,28 @@ function App() {
             <span className="text-sm font-medium text-zinc-300">Output</span>
           </div>
           <div className="flex-1 overflow-hidden">
-            <Editor
-              value={outputValue}
-              onChange={setOutputValue}
-              language={outputLanguage}
-              readOnly={true}
-              placeholder="Output will appear here..."
-            />
+            {engine.error ? (
+              <div className="p-4 bg-red-950/50 border border-red-800 rounded m-2">
+                <p className="text-red-300 font-medium">Error</p>
+                <p className="text-red-200 text-sm mt-1">{engine.error}</p>
+              </div>
+            ) : (
+              <Editor
+                value={engine.outputContent}
+                onChange={() => {}}
+                language={outputLanguage}
+                readOnly={true}
+                placeholder="Output will appear here..."
+              />
+            )}
           </div>
         </div>
       </div>
 
-      <StatusBar messageFormat={detectedFormat} messageType={detectedType} />
+      <StatusBar
+        messageFormat={engine.detectionResult?.format}
+        messageType={engine.detectionResult?.messageType}
+      />
     </div>
   );
 }
