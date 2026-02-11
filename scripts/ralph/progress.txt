@@ -334,3 +334,56 @@ Started: 2026-02-10
 - The component correctly handles language switching without memory leaks (old editor is destroyed before creating new one)
 
 ---
+## 2026-02-11 06:45:30 - PLAY-009
+- Implemented complete application layout with header, toolbar, split panes, and status bar
+- Created src/components/Header.tsx with app title and subtitle
+- Created src/components/Toolbar.tsx with action buttons:
+  - Parse, Validate, Translate, Format buttons with keyboard shortcut hints
+  - Sample message dropdown selector
+  - Clear button to reset application state
+  - Color-coded buttons: blue (Parse), green (Validate), purple (Translate), amber (Format)
+- Created src/components/StatusBar.tsx to display detected message format and type
+  - Shows format (SWIFT MT / ISO 20022 MX / No message)
+  - Shows message type with descriptions (MT103, pacs.008, etc.)
+  - Handles all 8 message types plus UNKNOWN
+- Implemented split-pane layout in App.tsx using CSS Grid:
+  - Two-column grid layout with equal columns
+  - Input editor on left with "Input" label
+  - Output editor on right with "Output" label
+  - Both editors use CodeMirror with auto-detected syntax highlighting
+- Integrated format auto-detection:
+  - Detects format and type when sample is loaded
+  - Automatically switches editor language mode (MT vs XML)
+  - Updates status bar in real-time
+- Added placeholder handlers for Parse, Validate, Translate, Format actions (to be implemented in later stories)
+- Full responsive layout using Tailwind classes with dark theme
+- Created comprehensive test suites:
+  - Header.test.tsx (3 tests)
+  - Toolbar.test.tsx (11 tests)
+  - StatusBar.test.tsx (8 tests)
+  - App.test.tsx (8 tests) - tests layout, sample loading, button interactions
+- All quality checks passing: build, lint, test (234 tests), tsc
+
+**Files changed:**
+- src/components/Header.tsx, Header.test.tsx (new)
+- src/components/Toolbar.tsx, Toolbar.test.tsx (new)
+- src/components/StatusBar.tsx, StatusBar.test.tsx (new)
+- src/App.tsx (complete rewrite with full layout)
+- src/App.test.tsx (updated for new layout)
+- src/samples/messages.ts (added `samples` export alias)
+- scripts/ralph/prd.json (PLAY-009 marked as passes: true)
+
+**Learnings:**
+- CSS Grid with `grid-cols-2` creates a perfect split-pane layout for editors
+- TypeScript's `exactOptionalPropertyTypes: true` requires explicit `| undefined` in interface props, not just `?:`
+- CodeMirror content is not directly accessible via `getByText` in tests - must check for editor existence via `.cm-editor` class
+- Sample message selector needs proper type annotations to avoid `any` type errors in strict mode
+- StatusBar must handle all MessageType enum values including UNKNOWN to satisfy Record<MessageType, string>
+- Lucide React icons integrate seamlessly with Tailwind and provide consistent sizing
+- Using CSS Grid's `overflow-hidden` on parent with `flex-1` on children ensures editors fill available space
+- Toolbar buttons with tooltips showing keyboard shortcuts improve UX even before shortcuts are implemented
+- Border colors (border-zinc-800) and background colors (bg-zinc-900, bg-zinc-950) create good visual hierarchy
+- Auto-detecting message format on input change provides instant feedback to users
+- Component composition (Header + Toolbar + Content + StatusBar) creates clean, maintainable layout structure
+
+---

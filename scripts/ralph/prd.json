@@ -62,7 +62,7 @@
       "title": "App layout — header, toolbar, split panes",
       "description": "Build the main application layout in App.tsx. Create src/components/Header.tsx with app title 'paymsg playground' and subtitle 'ISO 20022 & SWIFT MT Message Tools'. Create src/components/Toolbar.tsx with action buttons: Parse, Validate, Translate, Format, and a sample message dropdown. Create a split-pane layout with input editor on the left and output panel on the right. Use CSS grid or flexbox for the layout. The toolbar should be at the top, editors below. Add a status bar at the bottom showing detected message type and format. Dark theme throughout using Tailwind classes. The layout should be responsive and fill the viewport.",
       "priority": 9,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-010",
