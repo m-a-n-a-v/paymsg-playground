@@ -45,3 +45,49 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background: #3e4a58;
 }
+
+/* CodeMirror editor container */
+.editor-container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.editor-container .cm-editor {
+  height: 100%;
+}
+
+.editor-container .cm-scroller {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* MT syntax highlighting styles */
+.cm-mt-block {
+  color: #ffb454;
+  font-weight: bold;
+}
+
+.cm-mt-tag {
+  color: #39bae6;
+  font-weight: bold;
+}
+
+.cm-mt-amount {
+  color: #7fd962;
+}
+
+.cm-mt-currency {
+  color: #ff8f40;
+  font-weight: bold;
+}
+
+.cm-mt-date {
+  color: #d2a6ff;
+}
+
+.cm-mt-bic {
+  color: #59c2ff;
+  font-weight: bold;
+}
