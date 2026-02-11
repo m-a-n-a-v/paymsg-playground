@@ -795,3 +795,6 @@ Presented cheque
 </Document>`,
   },
 ];
+
+// Alias for convenience
+export const samples = sampleMessages;
