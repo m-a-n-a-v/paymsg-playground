@@ -502,24 +502,24 @@ Paris
     });
 
     it('should throw error for unsupported MT message types', async () => {
-      const mt202 = '{1:F01BANKBICAXXX0000000000}{2:I202BANKBICAXXXXN}{4:\n:20:REF\n-}{5:}';
+      const mt199 = '{1:F01BANKBICAXXX0000000000}{2:I199BANKBICAXXXXN}{4:\n:20:REF\n-}{5:}';
 
       await expect(
-        translateMessage(mt202, MessageFormat.MX)
-      ).rejects.toThrow('Translation from MT202 to MX not yet supported');
+        translateMessage(mt199, MessageFormat.MX)
+      ).rejects.toThrow('Translation from MT199 to MX not yet supported');
     });
 
     it('should throw error for unsupported MX message types', async () => {
-      const pacs009 = `<?xml version="1.0" encoding="UTF-8"?>
-<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.009.001.10">
-  <FICdtTrf>
-    <GrpHdr><MsgId>MSG001</MsgId><CreDtTm>2026-02-10T10:30:00Z</CreDtTm><NbOfTxs>1</NbOfTxs></GrpHdr>
-  </FICdtTrf>
+      const pacs002 = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.002.001.12">
+  <FIToFIPmtStsRpt>
+    <GrpHdr><MsgId>MSG001</MsgId><CreDtTm>2026-02-10T10:30:00Z</CreDtTm></GrpHdr>
+  </FIToFIPmtStsRpt>
 </Document>`;
 
       await expect(
-        translateMessage(pacs009, MessageFormat.MT)
-      ).rejects.toThrow('Translation from urn:iso:std:iso:20022:tech:xsd:pacs.009.001.10 to MT not yet supported');
+        translateMessage(pacs002, MessageFormat.MT)
+      ).rejects.toThrow('Translation from urn:iso:std:iso:20022:tech:xsd:pacs.002.001.12 to MT not yet supported');
     });
   });
 
@@ -555,6 +555,464 @@ Test Receiver
       expect(step2.translatedMessage).toContain('Test Receiver');
       expect(step2.translatedMessage).toContain(':70:Test payment');
       expect(step2.translatedMessage).toContain(':71A:SHA');
+    });
+  });
+
+  describe('MT202 to pacs.009 translation', () => {
+    const sampleMt202 = `{1:F01BANKBICAXXX0000000000}{2:I202BANKBICAXXXXN}{3:{121:550e8400-e29b-41d4-a716-446655440000}}{4:
+:20:INST202001
+:21:REL103001
+:32A:260210USD5000000,00
+:52A:CHASUS33XXX
+:56A:/CH9300762011623852957
+UBSWCHZH80AXXX
+:57A:/DE89370400440532013000
+DEUTDEFFXXX
+:58A:/GB29NWBK60161331926819
+NWBKGB2LXXX
+:72:/INS/Cover for MT103 payment
+-}{5:}`;
+
+    it('should translate MT202 to pacs.009 successfully', async () => {
+      const result = await translateMessage(sampleMt202, MessageFormat.MX);
+
+      expect(result.sourceFormat).toBe(MessageFormat.MT);
+      expect(result.targetFormat).toBe(MessageFormat.MX);
+      expect(result.sourceType).toBe(MessageType.MT202);
+      expect(result.targetType).toBe(MessageType.PACS009);
+      expect(result.translatedMessage).toContain('<?xml');
+      expect(result.translatedMessage).toContain('pacs.009.001.10');
+      expect(result.translatedMessage).toContain('<FICdtTrf>');
+    });
+
+    it('should map field 20 to InstrId', async () => {
+      const result = await translateMessage(sampleMt202, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<InstrId>INST202001</InstrId>');
+    });
+
+    it('should use field 21 for EndToEndId when UETR present', async () => {
+      const result = await translateMessage(sampleMt202, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<EndToEndId>550e8400-e29b-41d4-a716-446655440000</EndToEndId>');
+      expect(result.translatedMessage).toContain('<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>');
+    });
+
+    it('should map field 52A to InstgAgt', async () => {
+      const result = await translateMessage(sampleMt202, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<InstgAgt>');
+      expect(result.translatedMessage).toContain('<BICFI>CHASUS33XXX</BICFI>');
+    });
+
+    it('should map field 56A to IntrmyAgt1 with account', async () => {
+      const result = await translateMessage(sampleMt202, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<IntrmyAgt1>');
+      expect(result.translatedMessage).toContain('<BICFI>UBSWCHZH80AXXX</BICFI>');
+      expect(result.translatedMessage).toContain('<IntrmyAgt1Acct>');
+      expect(result.translatedMessage).toContain('<Id>CH9300762011623852957</Id>');
+    });
+
+    it('should map field 58A to Cdtr', async () => {
+      const result = await translateMessage(sampleMt202, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<Cdtr>');
+      expect(result.translatedMessage).toContain('<AnyBIC>NWBKGB2LXXX</AnyBIC>');
+      expect(result.translatedMessage).toContain('<CdtrAcct>');
+      expect(result.translatedMessage).toContain('<Id>GB29NWBK60161331926819</Id>');
+    });
+
+    it('should default charge bearer to SHAR', async () => {
+      const result = await translateMessage(sampleMt202, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<ChrgBr>SHAR</ChrgBr>');
+    });
+  });
+
+  describe('pacs.009 to MT202 translation', () => {
+    const samplePacs009 = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.009.001.10">
+  <FICdtTrf>
+    <GrpHdr>
+      <MsgId>MSG202-001</MsgId>
+      <CreDtTm>2026-02-10T14:30:00</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+    </GrpHdr>
+    <CdtTrfTxInf>
+      <PmtId>
+        <InstrId>INST202001</InstrId>
+        <EndToEndId>REL103001</EndToEndId>
+      </PmtId>
+      <IntrBkSttlmDt>2026-02-10</IntrBkSttlmDt>
+      <IntrBkSttlmAmt Ccy="USD">5000000.00</IntrBkSttlmAmt>
+      <InstgAgt>
+        <FinInstnId>
+          <BICFI>CHASUS33XXX</BICFI>
+        </FinInstnId>
+      </InstgAgt>
+      <CdtrAgt>
+        <FinInstnId>
+          <BICFI>DEUTDEFFXXX</BICFI>
+        </FinInstnId>
+      </CdtrAgt>
+      <Cdtr>
+        <Id>
+          <OrgId>
+            <AnyBIC>NWBKGB2LXXX</AnyBIC>
+          </OrgId>
+        </Id>
+      </Cdtr>
+    </CdtTrfTxInf>
+  </FICdtTrf>
+</Document>`;
+
+    it('should translate pacs.009 to MT202 successfully', async () => {
+      const result = await translateMessage(samplePacs009, MessageFormat.MT);
+
+      expect(result.sourceFormat).toBe(MessageFormat.MX);
+      expect(result.targetFormat).toBe(MessageFormat.MT);
+      expect(result.sourceType).toBe(MessageType.PACS009);
+      expect(result.targetType).toBe(MessageType.MT202);
+      expect(result.translatedMessage).toContain('{2:I202BANKBICAXXXXN}');
+    });
+
+    it('should map InstrId to field 20', async () => {
+      const result = await translateMessage(samplePacs009, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':20:INST202001');
+    });
+
+    it('should map EndToEndId to field 21', async () => {
+      const result = await translateMessage(samplePacs009, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':21:REL103001');
+    });
+
+    it('should map settlement date and amount to field 32A', async () => {
+      const result = await translateMessage(samplePacs009, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':32A:260210USD5000000,00');
+    });
+  });
+
+  describe('MT940 to camt.053 translation', () => {
+    const sampleMt940 = `{1:F01BANKBICAXXX0000000000}{2:O9400000000000000000N}{4:
+:20:STMT20231115002
+:25:DE89370400440532013000
+:28C:235/1
+:60F:C231114EUR12345,67
+:61:2311150000C1500,00NTRFNONREF
+:86:SEPA Credit Transfer from Customer
+:61:2311150000D500,00NCHKCHECK001
+:86:Check payment
+:62F:C231115EUR13345,67
+-}{5:}`;
+
+    it('should translate MT940 to camt.053 successfully', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+
+      expect(result.sourceFormat).toBe(MessageFormat.MT);
+      expect(result.targetFormat).toBe(MessageFormat.MX);
+      expect(result.sourceType).toBe(MessageType.MT940);
+      expect(result.targetType).toBe(MessageType.CAMT053);
+      expect(result.translatedMessage).toContain('<?xml');
+      expect(result.translatedMessage).toContain('camt.053.001.10');
+      expect(result.translatedMessage).toContain('<BkToCstmrStmt>');
+    });
+
+    it('should map field 20 to statement ID', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<Id>STMT20231115002</Id>');
+    });
+
+    it('should map field 25 IBAN to account', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<IBAN>DE89370400440532013000</IBAN>');
+    });
+
+    it('should map field 28C to statement number', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<LglSeqNb>235</LglSeqNb>');
+    });
+
+    it('should map field 60F to opening balance with OPBD', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<Cd>OPBD</Cd>');
+      expect(result.translatedMessage).toContain('<Amt Ccy="EUR">12345.67</Amt>');
+      expect(result.translatedMessage).toContain('<CdtDbtInd>CRDT</CdtDbtInd>');
+      expect(result.translatedMessage).toContain('<Dt>2023-11-14</Dt>');
+    });
+
+    it('should map field 62F to closing balance with CLBD', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<Cd>CLBD</Cd>');
+      expect(result.translatedMessage).toContain('<Amt Ccy="EUR">13345.67</Amt>');
+      expect(result.translatedMessage).toContain('<Dt>2023-11-15</Dt>');
+    });
+
+    it('should map field 61 entries to Ntry elements', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<Ntry>');
+      expect(result.translatedMessage).toContain('<Amt Ccy="EUR">1500.00</Amt>');
+      expect(result.translatedMessage).toContain('<CdtDbtInd>CRDT</CdtDbtInd>');
+      expect(result.translatedMessage).toContain('<Cd>NTRF</Cd>');
+      expect(result.translatedMessage).toContain('<AcctSvcrRef>NONREF</AcctSvcrRef>');
+    });
+
+    it('should map field 86 to remittance info', async () => {
+      const result = await translateMessage(sampleMt940, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<RmtInf>');
+      expect(result.translatedMessage).toContain('<Ustrd>SEPA Credit Transfer from Customer</Ustrd>');
+    });
+  });
+
+  describe('camt.053 to MT940 translation', () => {
+    const sampleCamt053 = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.10">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>MSG940-001</MsgId>
+      <CreDtTm>2023-11-15T23:59:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT20231115002</Id>
+      <LglSeqNb>235</LglSeqNb>
+      <CreDtTm>2023-11-15T23:59:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">12345.67</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2023-11-14</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <Amt Ccy="EUR">1500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <ValDt>
+          <Dt>2023-11-15</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Prtry>
+            <Cd>NTRF</Cd>
+          </Prtry>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>NONREF</AcctSvcrRef>
+            </Refs>
+            <RmtInf>
+              <Ustrd>SEPA Credit Transfer from Customer</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">13845.67</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2023-11-15</Dt>
+        </Dt>
+      </Bal>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>`;
+
+    it('should translate camt.053 to MT940 successfully', async () => {
+      const result = await translateMessage(sampleCamt053, MessageFormat.MT);
+
+      expect(result.sourceFormat).toBe(MessageFormat.MX);
+      expect(result.targetFormat).toBe(MessageFormat.MT);
+      expect(result.sourceType).toBe(MessageType.CAMT053);
+      expect(result.targetType).toBe(MessageType.MT940);
+      expect(result.translatedMessage).toContain('{2:O9400000000000000000N}');
+    });
+
+    it('should map statement ID to field 20', async () => {
+      const result = await translateMessage(sampleCamt053, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':20:STMT20231115002');
+    });
+
+    it('should map IBAN to field 25', async () => {
+      const result = await translateMessage(sampleCamt053, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':25:DE89370400440532013000');
+    });
+
+    it('should map opening balance to field 60F', async () => {
+      const result = await translateMessage(sampleCamt053, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':60F:C231114EUR12345,67');
+    });
+
+    it('should map closing balance to field 62F', async () => {
+      const result = await translateMessage(sampleCamt053, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':62F:C231115EUR13845,67');
+    });
+
+    it('should map entry to field 61', async () => {
+      const result = await translateMessage(sampleCamt053, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':61:231115C1500,00NTRFNONREF');
+    });
+  });
+
+  describe('MT942 to camt.052 translation', () => {
+    const sampleMt942 = `{1:F01BANKBICAXXX0000000000}{2:O9420000000000000000N}{4:
+:20:IRPT20231115003
+:25:DE89370400440532013000
+:28C:3/1
+:13D:231115+1430
+:34F:EUR10000,00
+:61:2311150000C1500,00NTRFNONREF
+:86:Large payment above floor limit
+:61:2311150000D500,00NCHKCHECK001
+:90D:5EUR12500,00
+:90C:8EUR25000,00
+-}{5:}`;
+
+    it('should translate MT942 to camt.052 successfully', async () => {
+      const result = await translateMessage(sampleMt942, MessageFormat.MX);
+
+      expect(result.sourceFormat).toBe(MessageFormat.MT);
+      expect(result.targetFormat).toBe(MessageFormat.MX);
+      expect(result.sourceType).toBe(MessageType.MT942);
+      expect(result.targetType).toBe(MessageType.CAMT052);
+      expect(result.translatedMessage).toContain('<?xml');
+      expect(result.translatedMessage).toContain('camt.052.001.10');
+      expect(result.translatedMessage).toContain('<BkToCstmrAcctRpt>');
+    });
+
+    it('should map field 13D to CreDtTm', async () => {
+      const result = await translateMessage(sampleMt942, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<CreDtTm>2023-11-15T14:30:00</CreDtTm>');
+    });
+
+    it('should map fields 90D and 90C to TxsSummary', async () => {
+      const result = await translateMessage(sampleMt942, MessageFormat.MX);
+      expect(result.translatedMessage).toContain('<TxsSummary>');
+      expect(result.translatedMessage).toContain('<TtlDbtNtries>');
+      expect(result.translatedMessage).toContain('<NbOfNtries>5</NbOfNtries>');
+      expect(result.translatedMessage).toContain('<Sum Ccy="EUR">12500.00</Sum>');
+      expect(result.translatedMessage).toContain('<TtlCdtNtries>');
+      expect(result.translatedMessage).toContain('<NbOfNtries>8</NbOfNtries>');
+      expect(result.translatedMessage).toContain('<Sum Ccy="EUR">25000.00</Sum>');
+    });
+  });
+
+  describe('camt.052 to MT942 translation', () => {
+    const sampleCamt052 = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.10">
+  <BkToCstmrAcctRpt>
+    <GrpHdr>
+      <MsgId>MSG942-001</MsgId>
+      <CreDtTm>2023-11-15T14:30:00</CreDtTm>
+    </GrpHdr>
+    <Rpt>
+      <Id>IRPT20231115003</Id>
+      <LglSeqNb>3</LglSeqNb>
+      <CreDtTm>2023-11-15T14:30:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+      <Ntry>
+        <Amt Ccy="EUR">1500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <ValDt>
+          <Dt>2023-11-15</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Prtry>
+            <Cd>NTRF</Cd>
+          </Prtry>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>NONREF</AcctSvcrRef>
+            </Refs>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <TxsSummary>
+        <TtlDbtNtries>
+          <NbOfNtries>5</NbOfNtries>
+          <Sum Ccy="EUR">12500.00</Sum>
+        </TtlDbtNtries>
+        <TtlCdtNtries>
+          <NbOfNtries>8</NbOfNtries>
+          <Sum Ccy="EUR">25000.00</Sum>
+        </TtlCdtNtries>
+      </TxsSummary>
+    </Rpt>
+  </BkToCstmrAcctRpt>
+</Document>`;
+
+    it('should translate camt.052 to MT942 successfully', async () => {
+      const result = await translateMessage(sampleCamt052, MessageFormat.MT);
+
+      expect(result.sourceFormat).toBe(MessageFormat.MX);
+      expect(result.targetFormat).toBe(MessageFormat.MT);
+      expect(result.sourceType).toBe(MessageType.CAMT052);
+      expect(result.targetType).toBe(MessageType.MT942);
+      expect(result.translatedMessage).toContain('{2:O9420000000000000000N}');
+    });
+
+    it('should map report ID to field 20', async () => {
+      const result = await translateMessage(sampleCamt052, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':20:IRPT20231115003');
+    });
+
+    it('should map CreDtTm to field 13D', async () => {
+      const result = await translateMessage(sampleCamt052, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':13D:231115+1430');
+    });
+
+    it('should map TxsSummary to fields 90D and 90C', async () => {
+      const result = await translateMessage(sampleCamt052, MessageFormat.MT);
+      expect(result.translatedMessage).toContain(':90D:5EUR12500,00');
+      expect(result.translatedMessage).toContain(':90C:8EUR25000,00');
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should reject same-format translation', async () => {
+      const mt103 = `{1:F01BANKBICAXXX0000000000}{2:I103BANKBICAXXXXN}{4:
+:20:TEST
+:23B:CRED
+:32A:260210EUR1000,00
+:50K:Test
+:59:Test
+:71A:SHA
+-}{5:}`;
+
+      await expect(
+        translateMessage(mt103, MessageFormat.MT),
+      ).rejects.toThrow('Source and target formats cannot both be MT');
+    });
+
+    it('should reject unsupported MT message types', async () => {
+      const mt199 = `{1:F01BANKBICAXXX0000000000}{2:I199BANKBICAXXXXN}{4:
+:20:TEST
+-}{5:}`;
+
+      await expect(
+        translateMessage(mt199, MessageFormat.MX),
+      ).rejects.toThrow('Translation from MT199 to MX not yet supported');
     });
   });
 });
