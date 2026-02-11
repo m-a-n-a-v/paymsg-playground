@@ -27,7 +27,7 @@
       "title": "MT message parser",
       "description": "Implement src/engine/parser.ts with MT message parsing. Parse the 5-block structure: extract Block 1 (app_id, service_id, LT address, session, sequence), Block 2 (Input/Output, message_type, BIC, priority), Block 3 (tag-value pairs), Block 4 (field tags and values), Block 5 (trailer tags). Parse Block 4 fields: extract :TAG:VALUE entries, handle multi-line values, parse compound subfields for key fields (32A → date+currency+amount, 50K → account+name/address, 59 → account+name/address, 61 → statement line components, 60F/62F → balance components). Handle both \\r\\n and \\n. Return typed MtMessage structure. Write comprehensive tests parsing sample MT103, MT202, MT940, MT942 messages.",
       "priority": 4,
-      "passes": false
+      "passes": true
     },
     {
       "id": "PLAY-005",

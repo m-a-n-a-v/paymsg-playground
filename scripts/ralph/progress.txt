@@ -126,3 +126,42 @@ Started: 2026-02-10
 - Messages starting with '<?xml' should be detected as MX format even if incomplete (reasonable UX)
 
 ---
+## 2026-02-11 06:15:00 - PLAY-004
+- Implemented complete MT message parser in src/engine/parser.ts
+- Implemented parseMtMessage() with 5-block structure parsing:
+  - Block 1: Basic header (app_id, service_id, LT address, session, sequence)
+  - Block 2: Application header with Input/Output format support
+  - Block 3: User header with tag-value pairs
+  - Block 4: Text block with field extraction and multi-line value support
+  - Block 5: Trailer with tag-value pairs
+- Implemented compound field parsers for:
+  - Field 32A: Date, Currency, Amount (YYMMDDCCCAA,AA)
+  - Field 33B: Currency, Amount
+  - Fields 50K, 59: Account + Name/Address (multi-line)
+  - Fields 52A, 56A, 57A, 58A: Account + BIC
+  - Fields 60F, 62F, 64: D/C indicator + Date + Currency + Amount (balance fields)
+  - Field 61: Statement line with complex subfield parsing (value_date, entry_date, debit_credit, funds_code, amount, type_code, reference, supplementary, additional_info)
+- Handled both \r\n and \n line endings
+- Created comprehensive test suite with 36 tests covering:
+  - MT103: All blocks, all compound fields, multi-line values
+  - MT202: Interbank transfer format
+  - MT940: Statement with multiple field 61 entries, balance fields
+  - MT942: Minimal interim report
+  - Edge cases: missing blocks, different line endings, Output format, fields without account prefix
+- All quality checks passing: build, lint, test (89 tests total), tsc
+
+**Files changed:**
+- src/engine/parser.ts (new, 370 lines)
+- src/engine/parser.test.ts (new, 458 lines)
+- scripts/ralph/prd.json (PLAY-004 marked as passes: true)
+
+**Learnings:**
+- MT field 61 (statement line) has complex optional components: entry date can be 1, 2, or 4 digits, or absent
+- TypeScript strict mode requires careful handling of regex match results and array indexing - all captures must be checked for undefined
+- Using bracket notation (obj['key']) instead of dot notation (obj.key) is required for Record<string, string> types in strict mode
+- Block 3 and Block 5 use nested braces format {TAG:VALUE} which requires non-capturing groups in regex: (?:\{[^}]+\})+
+- Multi-line field values are common in MT messages - parser must accumulate lines until next field tag
+- Entry date in field 61 is detected by checking if characters after value date are all digits vs D/C indicator
+- The parseMxMessage function is a placeholder for PLAY-005 - marked with underscore prefix to avoid unused parameter lint error
+
+---
