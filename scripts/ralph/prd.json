@@ -1,0 +1,138 @@
+{
+  "branchName": "ralph/build-playground",
+  "userStories": [
+    {
+      "id": "PLAY-001",
+      "title": "Project scaffolding — Vite + React + TypeScript + Tailwind",
+      "description": "Initialize the project with Vite, React 19, TypeScript strict mode, Tailwind CSS v4, Vitest, and ESLint. Create package.json with all dependencies (react, react-dom, @codemirror/state, @codemirror/view, @codemirror/lang-xml, @codemirror/theme-one-dark, lucide-react, tailwindcss@next, @tailwindcss/vite). Set up tsconfig.json with strict mode. Set up vite.config.ts with React plugin. Create index.html with dark theme. Set up Tailwind with a dark financial-terminal theme. Create a basic App.tsx with 'paymsg playground' heading. Ensure npm install, npm run build, npm run test, and npx tsc --noEmit all pass.",
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "PLAY-002",
+      "title": "Copy specs data and implement spec loader",
+      "description": "Create a script (scripts/copy-specs.sh) that copies needed JSON files from ../paymsg-specs into public/specs/ directory. Copy: reference/ (currencies, countries, iban_formats, bic_spec, swift_charsets), mt-specs/ (mt103, mt202, mt940, mt942, block_structure), mappings/ (all 4 mapping files), rules/ (all 4 rule files). Run the script to populate public/specs/. Implement src/specs/loader.ts with typed functions: loadCurrencies(), loadCountries(), loadIbanFormats(), loadMtSpec(type), loadMapping(pair), loadRules(type). Define TypeScript interfaces matching the JSON schemas. Add unit tests for the loader using Vitest. Ensure all specs load correctly.",
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "PLAY-003",
+      "title": "Engine types and format detector",
+      "description": "Create src/engine/types.ts with all shared TypeScript types: MessageType enum, MessageFormat (MT/MX), ParsedMessage, MtMessage (block1-5), MtField (tag, value, subfields), MxMessage (document root), ValidationResult, ValidationIssue (id, severity, field_path, message, suggestion), Severity enum, TranslationResult, DataLossWarning. Create src/engine/detector.ts that auto-detects message format: starts with '{1:' → MT, starts with '<?xml' or '<Document' → MX. Also detect specific MT type from Block 2 message_type field, and MX type from XML namespace. Write thorough tests for the detector with all 8 message types plus edge cases (empty, invalid, partial).",
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "PLAY-004",
+      "title": "MT message parser",
+      "description": "Implement src/engine/parser.ts with MT message parsing. Parse the 5-block structure: extract Block 1 (app_id, service_id, LT address, session, sequence), Block 2 (Input/Output, message_type, BIC, priority), Block 3 (tag-value pairs), Block 4 (field tags and values), Block 5 (trailer tags). Parse Block 4 fields: extract :TAG:VALUE entries, handle multi-line values, parse compound subfields for key fields (32A → date+currency+amount, 50K → account+name/address, 59 → account+name/address, 61 → statement line components, 60F/62F → balance components). Handle both \\r\\n and \\n. Return typed MtMessage structure. Write comprehensive tests parsing sample MT103, MT202, MT940, MT942 messages.",
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "PLAY-005",
+      "title": "MX (XML) message parser",
+      "description": "Extend src/engine/parser.ts with MX message parsing using DOMParser (browser-native). Parse XML into typed structures for pacs.008, pacs.009, camt.053, camt.052. Extract key elements: GrpHdr (MsgId, CreDtTm, NbOfTxs), transaction details (amounts with Ccy attributes, dates, party info, account IDs, BICs). Handle XML namespaces. Handle optional elements gracefully. Return a generic MxMessage structure with the parsed document tree accessible by path (e.g., 'GrpHdr/MsgId'). Implement getElementByPath() helper for navigating the parsed tree. Write tests parsing sample XML messages for all 4 MX types.",
+      "priority": 5,
+      "passes": false
+    },
+    {
+      "id": "PLAY-006",
+      "title": "Message formatter and pretty-printer",
+      "description": "Create src/engine/formatter.ts with pretty-printing functions. For MT messages: format with proper block structure, indent fields within Block 4, align tag:value pairs. For XML messages: format with proper indentation (2-space), line breaks between elements, preserve attributes on same line. Also implement a compact JSON formatter for parsed message structures. Create formatMt(message: string): string, formatXml(xml: string): string, and formatJson(obj: any, indent?: number): string. Write tests verifying formatting preserves content while improving readability.",
+      "priority": 6,
+      "passes": false
+    },
+    {
+      "id": "PLAY-007",
+      "title": "Sample messages collection",
+      "description": "Create src/samples/messages.ts with built-in sample messages. Include at least 9 samples: MT103 SEPA EUR transfer, MT103 USD wire with intermediary, MT202 interbank transfer, MT940 end-of-day statement (3+ entries), MT942 intraday report, pacs.008 customer credit transfer, pacs.009 FI credit transfer, camt.053 bank statement, camt.052 interim report. Each sample should have: id, label, description, format (MT/MX), messageType, and the actual message content as a string. Source realistic content from ../paymsg-specs/testdata/ but include inline. Export as a typed array. Write a simple test verifying all samples parse without errors.",
+      "priority": 7,
+      "passes": false
+    },
+    {
+      "id": "PLAY-008",
+      "title": "CodeMirror editor component with syntax highlighting",
+      "description": "Create src/components/Editor.tsx using CodeMirror 6. Install @codemirror/state, @codemirror/view, @codemirror/lang-xml, @codemirror/theme-one-dark, and @codemirror/language. Set up the editor with: dark theme (oneDark), line numbers, bracket matching, XML language support for MX messages. Create a basic MT syntax highlighting extension that colors :TAG: patterns in cyan, block delimiters {1: etc in yellow, and amounts in green. Support controlled value (value prop + onChange callback). Support read-only mode for output. The editor should fill its container and be responsive. Accept a language prop to switch between MT and XML modes.",
+      "priority": 8,
+      "passes": false
+    },
+    {
+      "id": "PLAY-009",
+      "title": "App layout — header, toolbar, split panes",
+      "description": "Build the main application layout in App.tsx. Create src/components/Header.tsx with app title 'paymsg playground' and subtitle 'ISO 20022 & SWIFT MT Message Tools'. Create src/components/Toolbar.tsx with action buttons: Parse, Validate, Translate, Format, and a sample message dropdown. Create a split-pane layout with input editor on the left and output panel on the right. Use CSS grid or flexbox for the layout. The toolbar should be at the top, editors below. Add a status bar at the bottom showing detected message type and format. Dark theme throughout using Tailwind classes. The layout should be responsive and fill the viewport.",
+      "priority": 9,
+      "passes": false
+    },
+    {
+      "id": "PLAY-010",
+      "title": "Parse action — parse and display structured output",
+      "description": "Wire up the Parse button in the toolbar. When clicked: detect message format (MT/MX), parse the message from the input editor, display the parsed structure as formatted JSON in the output panel. Show the detected message type in the status bar. Handle parse errors gracefully — display error messages in the output panel with red styling. Use the useEngine hook (src/hooks/useEngine.ts) to manage engine state. The output panel should use a read-only CodeMirror editor with JSON syntax. Implement a clear button to reset both panels. Add keyboard shortcut Ctrl/Cmd+Enter to trigger parse.",
+      "priority": 10,
+      "passes": false
+    },
+    {
+      "id": "PLAY-011",
+      "title": "Validation engine — schema and field validation",
+      "description": "Implement src/engine/validator.ts. Load MT field specs from specs to validate: mandatory fields present, field lengths within limits, field format patterns (e.g., :32A: must match date+currency+amount). Load SWIFT charset definitions to validate field content against X/Y/Z character sets. For MX messages: validate required XML elements present (GrpHdr, MsgId, CreDtTm, NbOfTxs, CdtTrfTxInf). Validate BIC format (8 or 11 chars, correct structure). Validate IBAN check digits (Mod-97). Validate currency codes against currencies.json. Return ValidationResult with typed issues. Write comprehensive tests with both valid and invalid messages.",
+      "priority": 11,
+      "passes": false
+    },
+    {
+      "id": "PLAY-012",
+      "title": "Validation panel UI",
+      "description": "Create src/components/ValidationPanel.tsx to display validation results. Wire up the Validate button in the toolbar. Show results as a categorized list: errors first (red), then warnings (amber), then info (blue). Each issue shows: severity icon, field path, message, and suggestion (if any). Show a summary at the top: 'X errors, Y warnings, Z info' with color-coded badges. If validation passes with no errors, show a green success banner. Allow clicking on a field path to highlight the relevant part in the input editor (bonus — at minimum show the path). Add filter toggles to show/hide each severity level.",
+      "priority": 12,
+      "passes": false
+    },
+    {
+      "id": "PLAY-013",
+      "title": "Translation engine — MT103 ↔ pacs.008",
+      "description": "Implement src/engine/translator.ts with MT103 → pacs.008 and pacs.008 → MT103 translation. Load mapping definitions from specs/mappings/mt103_pacs008.json. Implement transform functions: direct (copy value), split (field 32A → date + currency + amount), merge (reverse of split), lookup (charge bearer: SHA↔SHAR, OUR↔DEBT, BEN↔CRED), derived (generate MsgId, CreDtTm), conditional (EndToEndId from UETR or field 20). Handle BIC normalization (BIC8↔BIC11). Handle amount decimal format (comma↔period). Handle date format (YYMMDD↔YYYY-MM-DD). Track data loss warnings. Return TranslationResult with translated message and warnings. Write tests for both directions using sample messages.",
+      "priority": 13,
+      "passes": false
+    },
+    {
+      "id": "PLAY-014",
+      "title": "Translation engine — MT202 ↔ pacs.009, MT940 ↔ camt.053, MT942 ↔ camt.052",
+      "description": "Extend the translator to support all 4 message pair translations. MT202 ↔ pacs.009: similar to MT103 but simpler (FI parties only, no customer details). MT940 ↔ camt.053: map statement lines (:61:) to entries, balances (:60F:,:62F:) to balance types (OPBD,CLBD), information (:86:) to additional info. MT942 ↔ camt.052: similar to MT940 but for interim reports, handle floor limits and debit/credit totals. Load each mapping from specs. Implement a translateMessage(input, targetFormat) dispatch function that auto-detects source and calls the right translator. Write tests for all 4 pairs in both directions.",
+      "priority": 14,
+      "passes": false
+    },
+    {
+      "id": "PLAY-015",
+      "title": "Translation panel UI with data loss warnings",
+      "description": "Create src/components/TranslationPanel.tsx. Wire up the Translate button. Show a format selector (target format dropdown based on detected source). Display the translated message in the output editor with appropriate syntax highlighting (MT or XML). Show data loss warnings below the output: each warning shows field_path, category (Truncation, NoEquivalent, PrecisionLoss, etc.), and description. Use amber color for warnings. Show the translation direction (e.g., 'MT103 → pacs.008'). Add a 'Copy' button to copy the translated output. Add a 'Swap' button to swap input/output (put translated message back in input for reverse translation).",
+      "priority": 15,
+      "passes": false
+    },
+    {
+      "id": "PLAY-016",
+      "title": "Field inspector — interactive field-level exploration",
+      "description": "Create src/components/FieldInspector.tsx for MT messages. When a parsed MT message is displayed, show an interactive field list: each field shows tag (colored), field name (from specs), value, and parsed subfields (for compound fields). Clicking a field highlights it in the input editor. For field 32A, show parsed components: date, currency, amount. For field 50K/59, show account and name/address lines. For field 61, show all statement line components. For MX messages, show the XML element tree with key values highlighted. The inspector should appear as a tab or panel alongside the output. Load field names from MT specs data.",
+      "priority": 16,
+      "passes": false
+    },
+    {
+      "id": "PLAY-017",
+      "title": "Diff view — side-by-side MT vs MX comparison",
+      "description": "Create src/components/DiffView.tsx showing MT and MX messages side-by-side after translation. Highlight corresponding fields between MT and MX with matching colors (e.g., field 20 and MsgId both highlighted in same color, field 32A components and IntrBkSttlmAmt/IntrBkSttlmDt in same color). Use the mapping data to determine field correspondence. Show connecting lines or matching colors between related fields. Support scrolling both sides independently or synchronized. This view activates when a translation is performed. Include a legend showing the color mapping.",
+      "priority": 17,
+      "passes": false
+    },
+    {
+      "id": "PLAY-018",
+      "title": "Keyboard shortcuts, accessibility, and polish",
+      "description": "Add keyboard shortcuts: Ctrl/Cmd+Enter (parse), Ctrl/Cmd+Shift+V (validate), Ctrl/Cmd+Shift+T (translate), Ctrl/Cmd+Shift+F (format), Ctrl/Cmd+K (clear). Show keyboard shortcuts in button tooltips. Add loading states for async operations (spec loading). Add error boundaries for graceful error handling. Ensure proper ARIA labels on all interactive elements. Add tab navigation support. Ensure color contrast meets WCAG AA. Add a keyboard shortcuts help dialog (Ctrl/Cmd+?). Add smooth transitions between panels. Polish the overall UI: consistent spacing, proper truncation of long text, responsive behavior.",
+      "priority": 18,
+      "passes": false
+    },
+    {
+      "id": "PLAY-019",
+      "title": "Final integration tests and production build",
+      "description": "Write end-to-end integration tests in tests/: test the full flow for each message type (load sample → parse → validate → translate → verify output). Test error handling for malformed messages. Test format detection accuracy. Test all sample messages parse successfully. Test translation round-trips (MT→MX→MT preserves key fields). Ensure npm run build produces a working production bundle. Verify the build output is reasonable size (< 2MB total). Ensure npm run lint passes. Ensure npx tsc --noEmit passes. Fix any remaining warnings or issues. Add a .gitignore for node_modules, dist, .vite.",
+      "priority": 19,
+      "passes": false
+    }
+  ]
+}
