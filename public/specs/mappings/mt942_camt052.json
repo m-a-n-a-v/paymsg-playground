@@ -1,0 +1,519 @@
+{
+  "message_pair": "MT942/camt.052.001.10",
+  "mt_type": "MT942",
+  "mx_type": "camt.052.001.10",
+  "description": "Field mapping between MT942 (Interim Transaction Report) and camt.052.001.10 (BankToCustomerAccountReportV10). MT942 is used by financial institutions to provide intraday transaction information without opening/closing balances. camt.052 is the ISO 20022 XML equivalent for interim account reports.",
+  "mapping_notes": [
+    "MT942 uses SWIFT character set (ASCII-based), while camt.052 supports full Unicode. Character set conversion may be required.",
+    "MT942 field lengths are generally shorter than camt.052 equivalents. MT to MX translation is usually lossless, but MX to MT may require truncation.",
+    "MT942 uses comma as decimal separator (e.g., 12345,67), while camt.052 uses period (e.g., 12345.67)",
+    "MT942 field 61 (Statement Line) can repeat multiple times, mapping to multiple Ntry (Entry) elements in camt.052",
+    "MT942 field 86 (Information to Account Owner) provides additional details for the preceding field 61, mapping to Ntry/NtryDtls/TxDtls or Ntry/AddtlNtryInf",
+    "MT942 has NO opening/closing balance fields (60F/60M/62F/62M) unlike MT940. Focus is on transaction activity only.",
+    "MT942 has floor limit indicator (34F) and date/time indication (13D) which are unique to interim reporting",
+    "MT942 summary totals (90D/90C) include ALL transactions - both above and below floor limit - providing complete picture",
+    "Field 61 D/C marks map to camt.052 CdtDbtInd: C->CRDT (credit), D->DBIT (debit), RC->CRDT with reversal indicator, RD->DBIT with reversal indicator",
+    "MT942 transaction type codes (field 61 position after amount) use SWIFT Bank Transaction Codes (e.g., NCHK, NTRF) which should be preserved in camt.052 Prtry/Tp",
+    "Date conversion: MT942 uses YYMMDD format, camt.052 uses ISO 8601 YYYY-MM-DD format with century inference (YY >= 50 -> 19YY, YY < 50 -> 20YY)",
+    "Time conversion: MT942 field 13D uses YYMMDD+HHMM format (local time), camt.052 uses ISO 8601 date-time format with timezone"
+  ],
+  "mappings": [
+    {
+      "mt_tag": "20",
+      "mt_field_name": "Transaction Reference Number",
+      "mx_path": "Rpt/Id",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 20 (Report Reference) maps to Report Identification. This is the unique reference assigned by the account servicing institution for the interim report.",
+      "notes": "MT942 field 20 is max 16 chars, camt.052 Rpt/Id max 35 chars. No truncation needed for MT->MX. MX->MT may require truncation if > 16 chars.",
+      "truncation_rule": "If MX Rpt/Id > 16 chars, truncate to 16 chars for MT field 20"
+    },
+    {
+      "mt_tag": "25",
+      "mt_field_name": "Account Identification",
+      "mx_path": "Rpt/Acct/Id/Othr/Id",
+      "transform_type": "conditional",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 25 account number maps to Report Account Identification. If account matches IBAN format (starts with 2-letter country code + 2 check digits), use Acct/Id/IBAN element; otherwise use Acct/Id/Othr/Id.",
+      "notes": "Validate account format to determine IBAN vs other account number. Field 25 max 35 chars matches MX limits.",
+      "examples": [
+        {
+          "mt_value": "DE89370400440532013000",
+          "mx_value": "Use Rpt/Acct/Id/IBAN element",
+          "notes": "Valid IBAN format detected"
+        },
+        {
+          "mt_value": "12345678",
+          "mx_value": "Use Rpt/Acct/Id/Othr/Id element",
+          "notes": "Non-IBAN account number"
+        }
+      ]
+    },
+    {
+      "mt_tag": "25",
+      "mt_field_name": "Account Identification",
+      "mx_path": "Rpt/Acct/Id/IBAN",
+      "transform_type": "conditional",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 25 account number maps to IBAN element if the account matches IBAN format. Validate using country code check and Mod-97 algorithm.",
+      "notes": "IBAN validation: starts with 2-letter ISO 3166 country code + 2 check digits, passes Mod-97 validation. If valid, use IBAN element; otherwise use Othr/Id."
+    },
+    {
+      "mt_tag": "25P",
+      "mt_field_name": "Account Identification (with BIC)",
+      "mt_option": "P",
+      "mx_path": "Rpt/Acct/Id/IBAN",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 25P format is BIC/Account. The account portion (after /) maps to Acct/Id/IBAN or Othr/Id based on format validation. The BIC portion maps to Rpt/Acct/Svcr/FinInstnId/BICFI.",
+      "notes": "Field 25P is alternative to field 25. Parse: extract BIC (before /), extract account (after /). Validate account for IBAN format."
+    },
+    {
+      "mt_tag": "25P",
+      "mt_field_name": "Account Identification (with BIC)",
+      "mt_option": "P",
+      "mx_path": "Rpt/Acct/Svcr/FinInstnId/BICFI",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 25P BIC component (before /) maps to Account Servicer Financial Institution BIC. This identifies the institution holding the account.",
+      "notes": "Extract BIC from field 25P by taking characters before the / separator. BIC is 8 or 11 characters."
+    },
+    {
+      "mt_tag": "28C",
+      "mt_field_name": "Statement Number/Sequence Number",
+      "mx_path": "Rpt/LglSeqNb",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 28C report number (before optional /) maps to Legal Sequence Number. This is the sequential interim report number for the day.",
+      "notes": "Field 28C format: ReportNumber[/SequenceNumber]. Extract first part (before /) for LglSeqNb. Second part (after /) is page/sequence within report.",
+      "examples": [
+        {
+          "mt_value": "3",
+          "mx_value": "3",
+          "notes": "Report 3, no sequence number"
+        },
+        {
+          "mt_value": "3/2",
+          "mx_value": "3",
+          "notes": "Report 3, page 2 - page number goes to ElctrncSeqNb"
+        }
+      ]
+    },
+    {
+      "mt_tag": "28C",
+      "mt_field_name": "Statement Number/Sequence Number",
+      "mx_path": "Rpt/ElctrncSeqNb",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 28C sequence number (after /) maps to Electronic Sequence Number. This represents the page or sequence number within the interim report.",
+      "notes": "Extract second part of field 28C (after /) if present. If field 28C has no /, this element is omitted in MX."
+    },
+    {
+      "mt_tag": "13D",
+      "mt_field_name": "Date/Time Indication",
+      "mx_path": "Rpt/CreDtTm",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 13D (date/time when report was generated) maps to Report Creation Date Time. Format: YYMMDD+HHMM (MT) to ISO 8601 date-time (MX). Convert YYMMDD to YYYY-MM-DD and HHMM to HH:MM:SS with assumed timezone.",
+      "notes": "Field 13D format: YYMMDD+HHMM in local time. For camt.052, create ISO date-time: YYYY-MM-DDTHH:MM:SS with timezone indicator. Timezone should be derived from institutional configuration or omitted (using local timezone).",
+      "examples": [
+        {
+          "mt_value": "260210+1430",
+          "mx_value": "2026-02-10T14:30:00",
+          "notes": "February 10, 2026 at 14:30 local time"
+        }
+      ]
+    },
+    {
+      "mt_tag": "34F",
+      "mt_field_name": "Floor Limit Indicator",
+      "mx_path": "Rpt/RptgSrc/Prtry",
+      "transform_type": "derived",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 34F (floor limit currency and amount) indicates the threshold for individual transaction reporting. Can be mapped to a proprietary reporting source element or included in additional report information. camt.052 has no standard floor limit field.",
+      "notes": "Field 34F format: Currency (3 alpha) + Amount (15d with comma). This is metadata about reporting thresholds, not account data. Consider mapping to RptgSrc/Prtry or AddtlRptInf with explanation.",
+      "examples": [
+        {
+          "mt_value": "EUR10000,00",
+          "mx_value": "RptgSrc/Prtry: 'Floor limit EUR 10000.00 - only transactions above this amount are detailed'",
+          "notes": "Floor limit of EUR 10,000.00"
+        }
+      ]
+    },
+    {
+      "mt_tag": "34F",
+      "mt_field_name": "Floor Limit Indicator",
+      "mx_path": "Rpt/AddtlRptInf",
+      "transform_type": "derived",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "Alternative mapping for MT942 field 34F: include floor limit information in Additional Report Information free-text field for context.",
+      "notes": "Format as free text: 'Floor limit: EUR 10000.00 - transactions below this threshold are included in totals but not individually listed.' Helps recipient understand why some transactions may not be detailed."
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line",
+      "mx_path": "Rpt/Ntry",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 61 (Statement Line - transactions above floor limit) maps to an Entry (Ntry) element in camt.052. Each field 61 creates one Ntry. Field 61 has complex structure with 9 subfields that map to various Ntry subelements. Identical structure to MT940 field 61.",
+      "notes": "Field 61 is repeating and complex. Only transactions ABOVE the floor limit (if 34F specified) are individually listed. Parse all subfields: value date, entry date, D/C mark, funds code, amount, transaction type, customer reference, bank reference, supplementary details. Each subfield maps to specific Ntry elements."
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Value Date",
+      "mx_path": "Rpt/Ntry/ValDt/Dt",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 61 value date (positions 1-6, YYMMDD) maps to Entry Value Date. This is the date on which the entry is valued (funds available/debited).",
+      "notes": "Convert YYMMDD to YYYY-MM-DD format with century inference. Value date is when funds become available (credit) or are debited.",
+      "examples": [
+        {
+          "mt_value": "260210C1500,00NTRFNONREF",
+          "mx_value": "2026-02-10",
+          "notes": "Extract 260210 from positions 1-6, convert to 2026-02-10"
+        }
+      ]
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Entry Date",
+      "mx_path": "Rpt/Ntry/BookgDt/Dt",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 61 entry date (positions 7-10, MMDD, optional) maps to Entry Booking Date. If entry date is omitted in field 61, it equals the value date. Combine entry date MMDD with year from value date.",
+      "notes": "Entry date is optional (MMDD format). If present, combine with year from value date. If omitted, BookgDt equals ValDt.",
+      "examples": [
+        {
+          "mt_value": "2602100211C1500,00NTRFNONREF",
+          "mx_value": "2026-02-11",
+          "notes": "Entry date 0211 (Feb 11) with year 2026 from value date"
+        }
+      ]
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - D/C Mark",
+      "mx_path": "Rpt/Ntry/CdtDbtInd",
+      "transform_type": "lookup",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 61 D/C mark maps to Entry Credit/Debit Indicator. Lookup: C->CRDT, D->DBIT, RC->CRDT (reversal credit), RD->DBIT (reversal debit).",
+      "notes": "D/C mark is mandatory. RC and RD indicate reversals. For reversals, set CdtDbtInd and also set Sts/Cd to 'RJCT' or use RvslInd.",
+      "examples": [
+        {
+          "mt_value": "C",
+          "mx_value": "CRDT",
+          "notes": "Credit entry"
+        },
+        {
+          "mt_value": "D",
+          "mx_value": "DBIT",
+          "notes": "Debit entry"
+        },
+        {
+          "mt_value": "RC",
+          "mx_value": "CRDT with reversal indicator",
+          "notes": "Reversal of credit - set Rvsl element"
+        }
+      ]
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Funds Code",
+      "mx_path": "Rpt/Ntry/Sts/Cd",
+      "transform_type": "lookup",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 61 funds code (optional third character after D/C mark) maps to Entry Status. Omitted or blank -> BOOK (booked), D -> PDNG (pending - funds on hold).",
+      "notes": "Funds code is optional. Most entries are booked (omitted funds code). 'D' indicates funds pending/held. MX Sts element uses codes: BOOK, PDNG, INFO, etc."
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Amount",
+      "mx_path": "Rpt/Ntry/Amt",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 61 amount (after funds code, format: up to 15 digits with comma decimal) maps to Entry Amount. The currency is typically same as account currency or derived from context.",
+      "notes": "Convert comma decimal separator to period. Currency comes from account currency (field 25/25P context or field 34F if present), so Amt Ccy attribute uses report currency. Amount is unsigned (sign indicated by D/C mark).",
+      "examples": [
+        {
+          "mt_value": "260210C1500,00NTRFNONREF",
+          "mx_value": "<Amt Ccy=\"EUR\">1500.00</Amt>",
+          "notes": "Extract 1500,00, convert to 1500.00, currency from account/report context"
+        }
+      ]
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Transaction Type",
+      "mx_path": "Rpt/Ntry/BkTxCd/Prtry/Cd",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 61 transaction type code (4 characters: 1 letter + 3 alphanumeric) maps to Bank Transaction Code Proprietary Code. Format: N=SWIFT codes, F=non-SWIFT codes, followed by 3-char type (e.g., NCHK=check, NTRF=transfer, NSTD=standing order, NDDT=direct debit).",
+      "notes": "Preserve the full 4-character transaction type code. First char indicates SWIFT (N) or non-SWIFT (F). SWIFT bank transaction codes provide standardized type classification.",
+      "examples": [
+        {
+          "mt_value": "NTRF",
+          "mx_value": "NTRF",
+          "notes": "SWIFT transfer code"
+        },
+        {
+          "mt_value": "NCHK",
+          "mx_value": "NCHK",
+          "notes": "SWIFT check code"
+        }
+      ]
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Customer Reference",
+      "mx_path": "Rpt/Ntry/NtryDtls/TxDtls/Refs/AcctSvcrRef",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 61 customer reference (up to 16 chars after transaction type) maps to Transaction Details Account Servicer Reference. This is the reference for the account owner.",
+      "notes": "Extract customer reference from field 61. Max 16 chars. This is the reference the customer sees on their interim report.",
+      "truncation_rule": "MX AcctSvcrRef max 35 chars, MT field 61 customer reference max 16 chars. No truncation needed MT->MX."
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Bank Reference",
+      "mx_path": "Rpt/Ntry/NtryRef",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 61 bank reference (optional, preceded by //, up to 16 chars after //) maps to Entry Reference. This is the bank's internal reference for the entry.",
+      "notes": "Bank reference is optional in field 61. If present, extract after // delimiter (remove //). Max 16 chars in MT, max 35 in MX."
+    },
+    {
+      "mt_tag": "61",
+      "mt_field_name": "Statement Line - Supplementary Details",
+      "mx_path": "Rpt/Ntry/AddtlNtryInf",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 61 supplementary details (optional continuation line, up to 34 chars) maps to Additional Entry Information. This provides extra details about the transaction.",
+      "notes": "Supplementary details appear on a continuation line in field 61 (after CRLF). Max 34 chars. Map to AddtlNtryInf for free-text additional info.",
+      "truncation_rule": "MX AddtlNtryInf max 500 chars, MT field 61 supplementary details max 34 chars. No truncation needed MT->MX."
+    },
+    {
+      "mt_tag": "86",
+      "mt_field_name": "Information to Account Owner",
+      "mx_path": "Rpt/Ntry/NtryDtls/TxDtls/RmtInf/Ustrd",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT942 field 86 (up to 6 lines of 65 chars, max 390 chars) maps to Transaction Details Remittance Information Unstructured. Field 86 follows field 61 and provides additional information about the transaction (payer/payee name, remittance info, etc.). Identical to MT940 field 86.",
+      "notes": "Field 86 can be unstructured free text or structured with subfield codes (?20, ?21-?29, ?30, ?32, ?60, etc.). If unstructured, map entire content to RmtInf/Ustrd. If structured, parse subfields and map to appropriate elements (Dbtr/Nm for ?32, Cdtr/Nm for ?60, etc.).",
+      "truncation_rule": "MX RmtInf/Ustrd max 140 chars per line, multiple lines allowed. MT field 86 max 390 chars total (6 lines x 65 chars). May need to split or truncate."
+    },
+    {
+      "mt_tag": "86",
+      "mt_field_name": "Information to Account Owner - Structured",
+      "mx_path": "Rpt/Ntry/NtryDtls/TxDtls/RltdPties",
+      "transform_type": "conditional",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "If MT942 field 86 contains structured subfield codes, parse and map to Related Parties elements. Common codes: ?30 (sender BIC), ?32 (sender name), ?33 (sender address), ?60 (beneficiary BIC), ?62 (beneficiary name), ?63 (beneficiary address). Map ?32/?33 to Dbtr, ?62/?63 to Cdtr.",
+      "notes": "Field 86 structured format is bank-proprietary. Common subfield codes start with ?NN. If structured format detected, parse subfields and populate RltdPties (Dbtr, Cdtr, etc.). If unstructured, use RmtInf/Ustrd instead."
+    },
+    {
+      "mt_tag": "86",
+      "mt_field_name": "Information to Account Owner - Description",
+      "mx_path": "Rpt/Ntry/AddtlNtryInf",
+      "transform_type": "conditional",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "If field 86 content doesn't fit cleanly into RmtInf or RltdPties, or if it contains narrative description (?20-?29 codes), map to Additional Entry Information as overflow.",
+      "notes": "Field 86 ?20-?29 codes typically contain transaction description/narrative. Map to AddtlNtryInf for supplementary free-text info."
+    },
+    {
+      "mt_tag": "90D",
+      "mt_field_name": "Number and Sum of Debit Entries",
+      "mx_path": "Rpt/TxsSummary/TtlDbtNtries/NbOfNtries",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 90D number of debit entries (first 1-5 digits) maps to Transactions Summary Total Debit Entries Number of Entries. This is the count of ALL debit transactions, including those below the floor limit.",
+      "notes": "Field 90D format: NumberOfEntries(5n) + Currency(3a) + TotalAmount(15d). Extract number of entries. This count includes all debits, not just those listed in field 61.",
+      "examples": [
+        {
+          "mt_value": "5EUR12345,67",
+          "mx_value": "5",
+          "notes": "5 debit entries total"
+        }
+      ]
+    },
+    {
+      "mt_tag": "90D",
+      "mt_field_name": "Number and Sum of Debit Entries",
+      "mx_path": "Rpt/TxsSummary/TtlDbtNtries/Sum",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 90D total amount (after currency, 15d with comma) maps to Transactions Summary Total Debit Entries Sum. This is the sum of ALL debit amounts.",
+      "notes": "Convert comma decimal separator to period. Extract total debit amount. This sum includes all debits, not just those listed in field 61.",
+      "examples": [
+        {
+          "mt_value": "5EUR12345,67",
+          "mx_value": "12345.67",
+          "notes": "Total EUR 12,345.67 in debits"
+        }
+      ]
+    },
+    {
+      "mt_tag": "90D",
+      "mt_field_name": "Number and Sum of Debit Entries",
+      "mx_path": "Rpt/TxsSummary/TtlDbtNtries/Sum/@Ccy",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 90D currency (3 letters after number of entries) maps to Transactions Summary Total Debit Entries Sum currency attribute.",
+      "notes": "Extract currency code (3 letters). ISO 4217 currency code.",
+      "examples": [
+        {
+          "mt_value": "5EUR12345,67",
+          "mx_value": "EUR",
+          "notes": "Currency attribute for sum"
+        }
+      ]
+    },
+    {
+      "mt_tag": "90C",
+      "mt_field_name": "Number and Sum of Credit Entries",
+      "mx_path": "Rpt/TxsSummary/TtlCdtNtries/NbOfNtries",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 90C number of credit entries (first 1-5 digits) maps to Transactions Summary Total Credit Entries Number of Entries. This is the count of ALL credit transactions, including those below the floor limit.",
+      "notes": "Field 90C format: NumberOfEntries(5n) + Currency(3a) + TotalAmount(15d). Extract number of entries. This count includes all credits, not just those listed in field 61.",
+      "examples": [
+        {
+          "mt_value": "8EUR25000,00",
+          "mx_value": "8",
+          "notes": "8 credit entries total"
+        }
+      ]
+    },
+    {
+      "mt_tag": "90C",
+      "mt_field_name": "Number and Sum of Credit Entries",
+      "mx_path": "Rpt/TxsSummary/TtlCdtNtries/Sum",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 90C total amount (after currency, 15d with comma) maps to Transactions Summary Total Credit Entries Sum. This is the sum of ALL credit amounts.",
+      "notes": "Convert comma decimal separator to period. Extract total credit amount. This sum includes all credits, not just those listed in field 61.",
+      "examples": [
+        {
+          "mt_value": "8EUR25000,00",
+          "mx_value": "25000.00",
+          "notes": "Total EUR 25,000.00 in credits"
+        }
+      ]
+    },
+    {
+      "mt_tag": "90C",
+      "mt_field_name": "Number and Sum of Credit Entries",
+      "mx_path": "Rpt/TxsSummary/TtlCdtNtries/Sum/@Ccy",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT942 field 90C currency (3 letters after number of entries) maps to Transactions Summary Total Credit Entries Sum currency attribute.",
+      "notes": "Extract currency code (3 letters). ISO 4217 currency code.",
+      "examples": [
+        {
+          "mt_value": "8EUR25000,00",
+          "mx_value": "EUR",
+          "notes": "Currency attribute for sum"
+        }
+      ]
+    }
+  ],
+  "mt_only_fields": [
+    {
+      "mt_tag": "28C",
+      "mt_field_name": "Report Number/Sequence Number (combined)",
+      "reason": "MT942 field 28C combines report number and page/sequence number in single field (format: ReportNb/SeqNb). camt.052 separates these into LglSeqNb and ElctrncSeqNb. When translating MX to MT, must combine both elements into field 28C with / delimiter."
+    },
+    {
+      "mt_tag": "34F",
+      "mt_field_name": "Floor Limit Indicator",
+      "reason": "MT942 field 34F specifies threshold amount for individual transaction reporting. camt.052 has no standard floor limit field. Can be included in AddtlRptInf or RptgSrc/Prtry for context, but semantic meaning may be lost."
+    },
+    {
+      "mt_tag": "13D",
+      "mt_field_name": "Date/Time Indication (format)",
+      "reason": "MT942 field 13D uses YYMMDD+HHMM format with + separator and local time (no timezone). camt.052 uses ISO 8601 date-time format. Conversion is straightforward but format differs. Timezone information must be added or assumed during translation."
+    }
+  ],
+  "mx_only_fields": [
+    {
+      "mx_path": "GrpHdr/MsgId",
+      "mx_element_name": "Message Identification",
+      "default_strategy": "Generate unique identifier (UUID or timestamp-based) at translation time. MT942 field 20 is report reference, not message ID.",
+      "reason": "MT942 has no message-level ID concept (only report reference in field 20). camt.052 requires GrpHdr/MsgId for message identification."
+    },
+    {
+      "mx_path": "GrpHdr/CreDtTm",
+      "mx_element_name": "Creation Date Time",
+      "default_strategy": "Use field 13D if present (date/time indication), otherwise use current timestamp at translation time.",
+      "reason": "MT942 field 13D provides report generation timestamp but camt.052 GrpHdr/CreDtTm is for message creation. Use 13D value or current time."
+    },
+    {
+      "mx_path": "GrpHdr/MsgRcpt/Nm",
+      "mx_element_name": "Message Recipient Name",
+      "default_strategy": "Can be derived from account owner information or institutional configuration. Optional element, can be omitted.",
+      "reason": "MT942 is sent from bank to customer but doesn't explicitly identify the recipient in the message content. Recipient is implicit from message routing."
+    },
+    {
+      "mx_path": "Rpt/CreDtTm",
+      "mx_element_name": "Report Creation Date Time",
+      "default_strategy": "Use field 13D (date/time indication) if present, otherwise use current timestamp at translation time.",
+      "reason": "MT942 field 13D provides exact date/time when report was generated. Map directly to Rpt/CreDtTm."
+    },
+    {
+      "mx_path": "Rpt/Acct/Ccy",
+      "mx_element_name": "Account Currency",
+      "default_strategy": "Use currency from field 34F (floor limit) or field 90D/90C (summary totals). All should have same currency.",
+      "reason": "MT942 doesn't have explicit account currency field. Currency appears in field 34F and summary fields 90D/90C. camt.052 has Acct/Ccy to specify account currency once."
+    },
+    {
+      "mx_path": "Rpt/Ntry/NtryDtls/Btch",
+      "mx_element_name": "Entry Details Batch",
+      "default_strategy": "Omit. MT942 field 61 represents individual transactions, not batches.",
+      "reason": "MT942 interim report lines (field 61) are individual transactions. camt.052 supports batch indicators in Btch element but MT942 has no equivalent."
+    },
+    {
+      "mx_path": "Rpt/TxsSummary/TtlNtries",
+      "mx_element_name": "Transactions Summary Total Entries",
+      "default_strategy": "Calculate as sum of TtlDbtNtries/NbOfNtries + TtlCdtNtries/NbOfNtries. Derive from fields 90D and 90C.",
+      "reason": "MT942 has separate debit (90D) and credit (90C) totals but no combined total. camt.052 TxsSummary/TtlNtries can be calculated by adding debit count + credit count."
+    }
+  ],
+  "key_differences_from_mt940_camt053": [
+    "MT942/camt.052 are interim/intraday reports, whereas MT940/camt.053 are end-of-day statements. MT942 can be sent multiple times during the business day.",
+    "MT942 has NO opening balance (60F/60M) or closing balance (62F/62M) fields. The focus is on transaction activity only, not account balances.",
+    "MT942 has floor limit indicator (field 34F) which specifies a threshold. Only transactions ABOVE this amount are listed individually in field 61. Smaller transactions are not detailed but ARE included in summary totals (90D/90C).",
+    "MT942 has summary totals (fields 90D and 90C) that provide number and sum of ALL debit/credit entries - both those listed in field 61 (above floor limit) and those not listed (below floor limit). This gives complete transaction picture without listing every small transaction.",
+    "MT942 has date/time indication (field 13D) with precise timestamp (YYMMDD+HHMM format) - critical for intraday reporting where multiple MT942 messages may be sent for same account at different times during the day.",
+    "Field 61 (Statement Line) and field 86 (Information to Account Owner) structures are identical to MT940 - same parsing logic applies.",
+    "camt.052 TxsSummary maps directly to MT942 fields 90D/90C, providing better semantic alignment than MT940/camt.053 where summary must be calculated.",
+    "MT942/camt.052 are used for real-time cash management, liquidity monitoring, and fraud detection - operational use case differs from MT940/camt.053 reconciliation focus."
+  ]
+}

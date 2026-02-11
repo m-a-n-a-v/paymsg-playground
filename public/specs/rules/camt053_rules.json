@@ -1,0 +1,263 @@
+{
+  "message_type": "camt.053.001.10",
+  "description": "Business validation rules for camt.053.001.10 (Bank to Customer Statement)",
+  "rules": [
+    {
+      "id": "CAMT053-AM01",
+      "description": "Entry amount must be positive",
+      "severity": "error",
+      "category": "amount",
+      "condition": "always",
+      "assertion": "Stmt/Ntry/Amt > 0",
+      "field_paths": [
+        "Stmt/Ntry/Amt"
+      ],
+      "suggestion": "Entry amount must be greater than zero. Use the CdtDbtInd field to indicate credit or debit direction.",
+      "examples": [
+        "Valid: <Amt Ccy=\"EUR\">500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>",
+        "Invalid: <Amt Ccy=\"EUR\">-500.00</Amt> (use positive amount with DBIT indicator)"
+      ]
+    },
+    {
+      "id": "CAMT053-AM02",
+      "description": "Entry amount must respect currency decimal precision",
+      "severity": "error",
+      "category": "amount",
+      "condition": "always",
+      "assertion": "decimal_places(Stmt/Ntry/Amt) <= currency_decimal_places(Stmt/Ntry/Amt/@Ccy)",
+      "field_paths": [
+        "Stmt/Ntry/Amt",
+        "Stmt/Ntry/Amt/@Ccy"
+      ],
+      "suggestion": "Ensure the number of decimal places matches the currency's standard precision. For example, USD/EUR use 2 decimals, JPY uses 0 decimals, BHD uses 3 decimals.",
+      "references": [
+        "ISO 4217 currency decimal places specification"
+      ]
+    },
+    {
+      "id": "CAMT053-AM03",
+      "description": "Balance amount must be non-negative",
+      "severity": "error",
+      "category": "amount",
+      "condition": "if Stmt/Bal/CdtDbtInd exists",
+      "assertion": "Stmt/Bal/Amt >= 0",
+      "field_paths": [
+        "Stmt/Bal/Amt"
+      ],
+      "suggestion": "Balance amount should be non-negative. Use the CdtDbtInd field to indicate credit (positive) or debit (negative/overdrawn) balance.",
+      "examples": [
+        "Valid: <Amt Ccy=\"EUR\">1000.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>",
+        "Overdrawn: <Amt Ccy=\"EUR\">100.00</Amt><CdtDbtInd>DBIT</CdtDbtInd>"
+      ]
+    },
+    {
+      "id": "CAMT053-DT01",
+      "description": "Value date must not be in the future",
+      "severity": "error",
+      "category": "date",
+      "condition": "always",
+      "assertion": "Stmt/Ntry/ValDt/Dt <= today()",
+      "field_paths": [
+        "Stmt/Ntry/ValDt/Dt"
+      ],
+      "suggestion": "Value date must be today or in the past for end-of-day statements. Future value dates are not valid."
+    },
+    {
+      "id": "CAMT053-DT02",
+      "description": "Booking date must not be in the future",
+      "severity": "error",
+      "category": "date",
+      "condition": "if Stmt/Ntry/BookgDt/Dt exists",
+      "assertion": "Stmt/Ntry/BookgDt/Dt <= today()",
+      "field_paths": [
+        "Stmt/Ntry/BookgDt/Dt"
+      ],
+      "suggestion": "Booking date must be today or in the past. Future booking dates are not valid for completed transactions."
+    },
+    {
+      "id": "CAMT053-DT03",
+      "description": "Statement creation timestamp must not be in the future",
+      "severity": "error",
+      "category": "date",
+      "condition": "always",
+      "assertion": "Stmt/CreDtTm <= now()",
+      "field_paths": [
+        "Stmt/CreDtTm"
+      ],
+      "suggestion": "Statement creation date/time should be the current timestamp or earlier. Future timestamps are not valid."
+    },
+    {
+      "id": "CAMT053-CY01",
+      "description": "Entry currency code must be a valid ISO 4217 currency code",
+      "severity": "error",
+      "category": "currency",
+      "condition": "always",
+      "assertion": "is_valid_currency_code(Stmt/Ntry/Amt/@Ccy)",
+      "field_paths": [
+        "Stmt/Ntry/Amt/@Ccy"
+      ],
+      "suggestion": "Ensure the currency code is a valid 3-letter ISO 4217 code such as USD, EUR, GBP, JPY.",
+      "references": [
+        "ISO 4217 currency codes"
+      ]
+    },
+    {
+      "id": "CAMT053-CY02",
+      "description": "Balance currency code must be a valid ISO 4217 currency code",
+      "severity": "error",
+      "category": "currency",
+      "condition": "always",
+      "assertion": "is_valid_currency_code(Stmt/Bal/Amt/@Ccy)",
+      "field_paths": [
+        "Stmt/Bal/Amt/@Ccy"
+      ],
+      "suggestion": "Ensure the currency code is a valid 3-letter ISO 4217 code such as USD, EUR, GBP, JPY.",
+      "references": [
+        "ISO 4217 currency codes"
+      ]
+    },
+    {
+      "id": "CAMT053-IB01",
+      "description": "Account IBAN must be valid when present",
+      "severity": "error",
+      "category": "iban",
+      "condition": "if Stmt/Acct/Id/IBAN exists",
+      "assertion": "is_valid_iban(Stmt/Acct/Id/IBAN)",
+      "field_paths": [
+        "Stmt/Acct/Id/IBAN"
+      ],
+      "suggestion": "IBAN must follow ISO 13616 format with valid country code and Mod-97 check digits.",
+      "references": [
+        "ISO 13616 IBAN format"
+      ]
+    },
+    {
+      "id": "CAMT053-RF01",
+      "description": "Statement identification must be present and non-empty",
+      "severity": "error",
+      "category": "reference",
+      "condition": "always",
+      "assertion": "exists(Stmt/Id) and length(Stmt/Id) > 0",
+      "field_paths": [
+        "Stmt/Id"
+      ],
+      "suggestion": "Statement ID is mandatory and must uniquely identify this account statement.",
+      "examples": [
+        "<Id>STMT20260210-001</Id>"
+      ]
+    },
+    {
+      "id": "CAMT053-RF02",
+      "description": "Entry reference must be present for each entry",
+      "severity": "error",
+      "category": "reference",
+      "condition": "always",
+      "assertion": "exists(Stmt/Ntry/NtryRef) and length(Stmt/Ntry/NtryRef) > 0",
+      "field_paths": [
+        "Stmt/Ntry/NtryRef"
+      ],
+      "suggestion": "Each entry must have a unique reference for tracking and reconciliation purposes."
+    },
+    {
+      "id": "CAMT053-AC01",
+      "description": "Account identification must be present",
+      "severity": "error",
+      "category": "account",
+      "condition": "always",
+      "assertion": "exists(Stmt/Acct/Id)",
+      "field_paths": [
+        "Stmt/Acct/Id"
+      ],
+      "suggestion": "Account identification (IBAN or other ID) must be specified to identify which account this statement covers."
+    },
+    {
+      "id": "CAMT053-BAL01",
+      "description": "Opening balance must be present",
+      "severity": "error",
+      "category": "balance",
+      "condition": "always",
+      "assertion": "exists(Stmt/Bal[Tp/CdOrPrtry/Cd='OPBD'])",
+      "field_paths": [
+        "Stmt/Bal/Tp/CdOrPrtry/Cd"
+      ],
+      "suggestion": "Statement must include an opening balance (OPBD - Opening Booked) to establish the starting position.",
+      "examples": [
+        "<Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy=\"EUR\">5000.00</Amt><CdtDbtInd>CRDT</CdtDbtInd></Bal>"
+      ]
+    },
+    {
+      "id": "CAMT053-BAL02",
+      "description": "Closing balance must be present",
+      "severity": "error",
+      "category": "balance",
+      "condition": "always",
+      "assertion": "exists(Stmt/Bal[Tp/CdOrPrtry/Cd='CLBD'])",
+      "field_paths": [
+        "Stmt/Bal/Tp/CdOrPrtry/Cd"
+      ],
+      "suggestion": "Statement must include a closing balance (CLBD - Closing Booked) to establish the ending position.",
+      "examples": [
+        "<Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp><Amt Ccy=\"EUR\">5500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd></Bal>"
+      ]
+    },
+    {
+      "id": "CAMT053-BAL03",
+      "description": "Balance consistency check - closing balance must equal opening balance plus net entries",
+      "severity": "error",
+      "category": "balance",
+      "condition": "if Stmt/Bal[Tp/CdOrPrtry/Cd='OPBD'] and Stmt/Bal[Tp/CdOrPrtry/Cd='CLBD'] exist",
+      "assertion": "closing_balance == opening_balance + sum_credits - sum_debits",
+      "field_paths": [
+        "Stmt/Bal[Tp/CdOrPrtry/Cd='OPBD']/Amt",
+        "Stmt/Bal[Tp/CdOrPrtry/Cd='CLBD']/Amt",
+        "Stmt/Ntry/Amt",
+        "Stmt/Ntry/CdtDbtInd"
+      ],
+      "suggestion": "The closing balance must equal the opening balance plus all credit entries minus all debit entries. Verify all entries are included and amounts are correct.",
+      "examples": [
+        "Opening: 5000 EUR, Credits: +1000 EUR, Debits: -500 EUR, Closing must be: 5500 EUR"
+      ]
+    },
+    {
+      "id": "CAMT053-TS01",
+      "description": "Total entry count must match actual entry count when present",
+      "severity": "error",
+      "category": "summary",
+      "condition": "if Stmt/TxsSummary/TtlNtries/NbOfNtries exists",
+      "assertion": "Stmt/TxsSummary/TtlNtries/NbOfNtries == count(Stmt/Ntry)",
+      "field_paths": [
+        "Stmt/TxsSummary/TtlNtries/NbOfNtries",
+        "Stmt/Ntry"
+      ],
+      "suggestion": "The total entry count in TxsSummary must match the actual number of entries in the statement."
+    },
+    {
+      "id": "CAMT053-TS02",
+      "description": "Total debit sum must match sum of all debit entry amounts when present",
+      "severity": "error",
+      "category": "summary",
+      "condition": "if Stmt/TxsSummary/TtlDbtNtries/Sum exists",
+      "assertion": "Stmt/TxsSummary/TtlDbtNtries/Sum == sum(Stmt/Ntry[CdtDbtInd='DBIT']/Amt)",
+      "field_paths": [
+        "Stmt/TxsSummary/TtlDbtNtries/Sum",
+        "Stmt/Ntry/Amt",
+        "Stmt/Ntry/CdtDbtInd"
+      ],
+      "suggestion": "The total debit sum in TxsSummary must equal the sum of all debit entry amounts in the statement."
+    },
+    {
+      "id": "CAMT053-TS03",
+      "description": "Total credit sum must match sum of all credit entry amounts when present",
+      "severity": "error",
+      "category": "summary",
+      "condition": "if Stmt/TxsSummary/TtlCdtNtries/Sum exists",
+      "assertion": "Stmt/TxsSummary/TtlCdtNtries/Sum == sum(Stmt/Ntry[CdtDbtInd='CRDT']/Amt)",
+      "field_paths": [
+        "Stmt/TxsSummary/TtlCdtNtries/Sum",
+        "Stmt/Ntry/Amt",
+        "Stmt/Ntry/CdtDbtInd"
+      ],
+      "suggestion": "The total credit sum in TxsSummary must equal the sum of all credit entry amounts in the statement."
+    }
+  ]
+}

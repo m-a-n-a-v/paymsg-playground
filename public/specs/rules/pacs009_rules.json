@@ -1,0 +1,298 @@
+{
+  "message_type": "pacs.009.001.10",
+  "description": "Business validation rules for pacs.009.001.10 (Financial Institution Credit Transfer)",
+  "rules": [
+    {
+      "id": "PACS009-AM01",
+      "description": "Interbank settlement amount must be positive",
+      "severity": "error",
+      "category": "amount",
+      "condition": "always",
+      "assertion": "CdtTrfTxInf/IntrBkSttlmAmt > 0",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt"
+      ],
+      "suggestion": "Ensure the interbank settlement amount is greater than zero. Zero or negative amounts are not valid for credit transfers.",
+      "examples": [
+        "Valid: <IntrBkSttlmAmt Ccy=\"USD\">1000.00</IntrBkSttlmAmt>",
+        "Invalid: <IntrBkSttlmAmt Ccy=\"USD\">0.00</IntrBkSttlmAmt>"
+      ]
+    },
+    {
+      "id": "PACS009-AM02",
+      "description": "Interbank settlement amount must respect currency decimal precision",
+      "severity": "error",
+      "category": "amount",
+      "condition": "always",
+      "assertion": "decimal_places(CdtTrfTxInf/IntrBkSttlmAmt) <= currency_decimal_places(CdtTrfTxInf/IntrBkSttlmAmt/@Ccy)",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt",
+        "CdtTrfTxInf/IntrBkSttlmAmt/@Ccy"
+      ],
+      "suggestion": "Ensure the number of decimal places matches the currency's standard precision. For example, USD/EUR use 2 decimals, JPY uses 0 decimals, BHD uses 3 decimals.",
+      "references": [
+        "ISO 4217 currency decimal places specification"
+      ]
+    },
+    {
+      "id": "PACS009-DT01",
+      "description": "Interbank settlement date must not be in the past",
+      "severity": "error",
+      "category": "date",
+      "condition": "always",
+      "assertion": "CdtTrfTxInf/IntrBkSttlmDt >= today()",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmDt"
+      ],
+      "suggestion": "Settlement date must be today or a future date. Past settlement dates are not valid for new payment instructions.",
+      "examples": [
+        "Valid: <IntrBkSttlmDt>2026-02-10</IntrBkSttlmDt> (today or future)",
+        "Invalid: <IntrBkSttlmDt>2026-02-08</IntrBkSttlmDt> (past)"
+      ]
+    },
+    {
+      "id": "PACS009-DT02",
+      "description": "Interbank settlement date must not be more than 90 days in the future",
+      "severity": "warning",
+      "category": "date",
+      "condition": "always",
+      "assertion": "CdtTrfTxInf/IntrBkSttlmDt <= today() + 90 days",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmDt"
+      ],
+      "suggestion": "Settlement dates more than 90 days in the future may be rejected by some systems. Verify the date is correct."
+    },
+    {
+      "id": "PACS009-DT03",
+      "description": "Group header creation timestamp must not be in the future",
+      "severity": "error",
+      "category": "date",
+      "condition": "always",
+      "assertion": "GrpHdr/CreDtTm <= now()",
+      "field_paths": [
+        "GrpHdr/CreDtTm"
+      ],
+      "suggestion": "Creation date/time should be the current timestamp or earlier. Future timestamps are not valid."
+    },
+    {
+      "id": "PACS009-CY01",
+      "description": "Settlement currency code must be a valid ISO 4217 currency code",
+      "severity": "error",
+      "category": "currency",
+      "condition": "always",
+      "assertion": "is_valid_currency_code(CdtTrfTxInf/IntrBkSttlmAmt/@Ccy)",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt/@Ccy"
+      ],
+      "suggestion": "Ensure the currency code is a valid 3-letter ISO 4217 code such as USD, EUR, GBP, JPY.",
+      "references": [
+        "ISO 4217 currency codes"
+      ]
+    },
+    {
+      "id": "PACS009-BC01",
+      "description": "Instructing agent BIC must be valid",
+      "severity": "error",
+      "category": "bic",
+      "condition": "if GrpHdr/InstgAgt/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(GrpHdr/InstgAgt/FinInstnId/BICFI)",
+      "field_paths": [
+        "GrpHdr/InstgAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "BIC must be 8 or 11 characters following ISO 9362 format: 4 alpha (institution) + 2 alpha (country) + 2 alphanumeric (location) + optional 3 alphanumeric (branch).",
+      "references": [
+        "ISO 9362 BIC format"
+      ]
+    },
+    {
+      "id": "PACS009-BC02",
+      "description": "Instructed agent BIC must be valid",
+      "severity": "error",
+      "category": "bic",
+      "condition": "if GrpHdr/InstdAgt/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(GrpHdr/InstdAgt/FinInstnId/BICFI)",
+      "field_paths": [
+        "GrpHdr/InstdAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "BIC must be 8 or 11 characters following ISO 9362 format.",
+      "references": [
+        "ISO 9362 BIC format"
+      ]
+    },
+    {
+      "id": "PACS009-BC03",
+      "description": "Creditor agent BIC must be valid",
+      "severity": "error",
+      "category": "bic",
+      "condition": "if CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI)",
+      "field_paths": [
+        "CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "BIC must be 8 or 11 characters following ISO 9362 format.",
+      "references": [
+        "ISO 9362 BIC format"
+      ]
+    },
+    {
+      "id": "PACS009-BC04",
+      "description": "Intermediary agent BIC must be valid",
+      "severity": "error",
+      "category": "bic",
+      "condition": "if CdtTrfTxInf/IntrmyAgt1/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(CdtTrfTxInf/IntrmyAgt1/FinInstnId/BICFI)",
+      "field_paths": [
+        "CdtTrfTxInf/IntrmyAgt1/FinInstnId/BICFI"
+      ],
+      "suggestion": "BIC must be 8 or 11 characters following ISO 9362 format.",
+      "references": [
+        "ISO 9362 BIC format"
+      ]
+    },
+    {
+      "id": "PACS009-PT01",
+      "description": "Creditor institution identification must be present",
+      "severity": "error",
+      "category": "party",
+      "condition": "always",
+      "assertion": "exists(CdtTrfTxInf/Cdtr/Id/OrgId/AnyBIC)",
+      "field_paths": [
+        "CdtTrfTxInf/Cdtr/Id/OrgId/AnyBIC"
+      ],
+      "suggestion": "Creditor (beneficiary institution) must be identified with a BIC. This is mandatory for financial institution credit transfers.",
+      "examples": [
+        "<Cdtr><Id><OrgId><AnyBIC>CHASUS33</AnyBIC></OrgId></Id></Cdtr>"
+      ]
+    },
+    {
+      "id": "PACS009-PT02",
+      "description": "Creditor agent must be present",
+      "severity": "error",
+      "category": "party",
+      "condition": "always",
+      "assertion": "exists(CdtTrfTxInf/CdtrAgt)",
+      "field_paths": [
+        "CdtTrfTxInf/CdtrAgt"
+      ],
+      "suggestion": "Creditor agent (beneficiary's bank) must be specified for the financial institution transfer."
+    },
+    {
+      "id": "PACS009-RF01",
+      "description": "End-to-end identification must be present and non-empty",
+      "severity": "error",
+      "category": "reference",
+      "condition": "always",
+      "assertion": "exists(CdtTrfTxInf/PmtId/EndToEndId) and length(CdtTrfTxInf/PmtId/EndToEndId) > 0",
+      "field_paths": [
+        "CdtTrfTxInf/PmtId/EndToEndId"
+      ],
+      "suggestion": "End-to-end identification is mandatory and must contain a value. Use the related customer payment reference (e.g., MT103 field 20) or generate a unique reference.",
+      "examples": [
+        "<EndToEndId>REF123456789</EndToEndId>"
+      ]
+    },
+    {
+      "id": "PACS009-RF02",
+      "description": "Instruction identification must be present and non-empty",
+      "severity": "error",
+      "category": "reference",
+      "condition": "always",
+      "assertion": "exists(CdtTrfTxInf/PmtId/InstrId) and length(CdtTrfTxInf/PmtId/InstrId) > 0",
+      "field_paths": [
+        "CdtTrfTxInf/PmtId/InstrId"
+      ],
+      "suggestion": "Instruction identification is mandatory and must contain a unique value for this interbank transfer.",
+      "examples": [
+        "<InstrId>INST20260210-001</InstrId>"
+      ]
+    },
+    {
+      "id": "PACS009-RF03",
+      "description": "UETR must be a valid UUID when present",
+      "severity": "error",
+      "category": "reference",
+      "condition": "if CdtTrfTxInf/PmtId/UETR exists",
+      "assertion": "is_valid_uuid(CdtTrfTxInf/PmtId/UETR)",
+      "field_paths": [
+        "CdtTrfTxInf/PmtId/UETR"
+      ],
+      "suggestion": "UETR (Unique End-to-End Transaction Reference) must be a valid UUID format for SWIFT gpi tracking.",
+      "references": [
+        "SWIFT gpi UETR specification"
+      ],
+      "examples": [
+        "Valid: 550e8400-e29b-41d4-a716-446655440000"
+      ]
+    },
+    {
+      "id": "PACS009-CH01",
+      "description": "Charge bearer code must be a valid value",
+      "severity": "error",
+      "category": "charge",
+      "condition": "if CdtTrfTxInf/ChrgBr exists",
+      "assertion": "CdtTrfTxInf/ChrgBr in ['DEBT', 'CRED', 'SHAR', 'SLEV']",
+      "field_paths": [
+        "CdtTrfTxInf/ChrgBr"
+      ],
+      "suggestion": "Charge bearer must be one of: DEBT (debtor pays all), CRED (creditor pays all), SHAR (shared), SLEV (service level).",
+      "examples": [
+        "Valid: <ChrgBr>SHAR</ChrgBr>",
+        "Invalid: <ChrgBr>SHA</ChrgBr> (use SHAR, not SHA)"
+      ]
+    },
+    {
+      "id": "PACS009-SM01",
+      "description": "Settlement method code must be valid when present",
+      "severity": "error",
+      "category": "settlement",
+      "condition": "if CdtTrfTxInf/SttlmInf/SttlmMtd exists",
+      "assertion": "CdtTrfTxInf/SttlmInf/SttlmMtd in ['INDA', 'INGA', 'COVE', 'CLRG']",
+      "field_paths": [
+        "CdtTrfTxInf/SttlmInf/SttlmMtd"
+      ],
+      "suggestion": "Settlement method must be one of: INDA (instructed agent), INGA (instructing agent), COVE (cover method), CLRG (clearing system).",
+      "examples": [
+        "Valid: <SttlmMtd>CLRG</SttlmMtd>"
+      ]
+    },
+    {
+      "id": "PACS009-GH01",
+      "description": "Group header message ID must be present and non-empty",
+      "severity": "error",
+      "category": "header",
+      "condition": "always",
+      "assertion": "exists(GrpHdr/MsgId) and length(GrpHdr/MsgId) > 0",
+      "field_paths": [
+        "GrpHdr/MsgId"
+      ],
+      "suggestion": "Message ID is mandatory and must be unique. Consider using UUID format or a unique institution-specific identifier."
+    },
+    {
+      "id": "PACS009-GH02",
+      "description": "Number of transactions must match actual transaction count",
+      "severity": "error",
+      "category": "header",
+      "condition": "if GrpHdr/NbOfTxs exists",
+      "assertion": "GrpHdr/NbOfTxs == count(CdtTrfTxInf)",
+      "field_paths": [
+        "GrpHdr/NbOfTxs",
+        "CdtTrfTxInf"
+      ],
+      "suggestion": "The NbOfTxs field must accurately reflect the number of CdtTrfTxInf elements in the message."
+    },
+    {
+      "id": "PACS009-RG01",
+      "description": "High-value interbank transfers may require additional controls",
+      "severity": "warning",
+      "category": "regulatory",
+      "condition": "if CdtTrfTxInf/IntrBkSttlmAmt >= 1000000",
+      "assertion": "exists(CdtTrfTxInf/InstrForNxtAgt) or exists(CdtTrfTxInf/RgltryRptg)",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt",
+        "CdtTrfTxInf/InstrForNxtAgt",
+        "CdtTrfTxInf/RgltryRptg"
+      ],
+      "suggestion": "High-value transfers (>= 1 million in any currency) may require special instructions or regulatory reporting. Verify institutional controls and compliance requirements."
+    }
+  ]
+}

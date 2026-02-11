@@ -1,0 +1,554 @@
+{
+  "message_type": "pacs.008.001.10",
+  "description": "Business validation rules for pacs.008.001.10 (Customer Credit Transfer) messages",
+  "rules": [
+    {
+      "id": "PACS008-AM01",
+      "description": "Settlement amount must be positive",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "IntrBkSttlmAmt > 0",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt"
+      ],
+      "suggestion": "Ensure the settlement amount is a positive decimal value greater than zero",
+      "category": "amount"
+    },
+    {
+      "id": "PACS008-AM02",
+      "description": "Instructed amount must be positive if present",
+      "severity": "error",
+      "condition": "if InstdAmt exists",
+      "assertion": "InstdAmt > 0",
+      "field_paths": [
+        "CdtTrfTxInf/InstdAmt"
+      ],
+      "suggestion": "Ensure the instructed amount is a positive decimal value greater than zero",
+      "category": "amount"
+    },
+    {
+      "id": "PACS008-AM03",
+      "description": "Amount decimal precision must match currency specification",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "decimal_places(IntrBkSttlmAmt) <= currency_decimal_places(IntrBkSttlmAmt/@Ccy)",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt",
+        "CdtTrfTxInf/IntrBkSttlmAmt/@Ccy"
+      ],
+      "suggestion": "Check ISO 4217 currency specification for correct decimal places (e.g., 2 for USD/EUR, 0 for JPY, 3 for BHD)",
+      "category": "amount",
+      "references": [
+        "ISO 4217"
+      ]
+    },
+    {
+      "id": "PACS008-AM04",
+      "description": "Settlement amount and instructed amount currencies should be consistent if both present",
+      "severity": "warning",
+      "condition": "if InstdAmt exists",
+      "assertion": "IntrBkSttlmAmt/@Ccy == InstdAmt/@Ccy OR XchgRate exists",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt/@Ccy",
+        "CdtTrfTxInf/InstdAmt/@Ccy",
+        "CdtTrfTxInf/XchgRate"
+      ],
+      "suggestion": "If currencies differ, provide an exchange rate in XchgRate field",
+      "category": "amount"
+    },
+    {
+      "id": "PACS008-DT01",
+      "description": "Settlement date must not be in the past",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "IntrBkSttlmDt >= current_date()",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmDt"
+      ],
+      "suggestion": "Ensure the settlement date is today or a future date",
+      "category": "date"
+    },
+    {
+      "id": "PACS008-DT02",
+      "description": "Settlement date should not be more than 365 days in the future",
+      "severity": "warning",
+      "condition": "always",
+      "assertion": "IntrBkSttlmDt <= current_date() + 365 days",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmDt"
+      ],
+      "suggestion": "Review if settlement date is unusually far in the future",
+      "category": "date"
+    },
+    {
+      "id": "PACS008-DT03",
+      "description": "Creation date/time must not be in the future",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "GrpHdr/CreDtTm <= current_datetime()",
+      "field_paths": [
+        "GrpHdr/CreDtTm"
+      ],
+      "suggestion": "Ensure the creation date/time is not set to a future timestamp",
+      "category": "date"
+    },
+    {
+      "id": "PACS008-CY01",
+      "description": "Currency code must be valid ISO 4217",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "IntrBkSttlmAmt/@Ccy in iso4217_currency_codes()",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt/@Ccy"
+      ],
+      "suggestion": "Use a valid 3-letter ISO 4217 currency code (e.g., USD, EUR, GBP, JPY)",
+      "category": "currency",
+      "references": [
+        "ISO 4217"
+      ]
+    },
+    {
+      "id": "PACS008-CY02",
+      "description": "Instructed amount currency must be valid ISO 4217 if present",
+      "severity": "error",
+      "condition": "if InstdAmt exists",
+      "assertion": "InstdAmt/@Ccy in iso4217_currency_codes()",
+      "field_paths": [
+        "CdtTrfTxInf/InstdAmt/@Ccy"
+      ],
+      "suggestion": "Use a valid 3-letter ISO 4217 currency code",
+      "category": "currency",
+      "references": [
+        "ISO 4217"
+      ]
+    },
+    {
+      "id": "PACS008-BC01",
+      "description": "Instructing agent BIC must be valid",
+      "severity": "error",
+      "condition": "if InstgAgt/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(InstgAgt/FinInstnId/BICFI)",
+      "field_paths": [
+        "GrpHdr/InstgAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "Ensure BIC is 8 or 11 characters following ISO 9362 format (e.g., DEUTDEFF or DEUTDEFFXXX)",
+      "category": "bic",
+      "references": [
+        "ISO 9362"
+      ]
+    },
+    {
+      "id": "PACS008-BC02",
+      "description": "Instructed agent BIC must be valid",
+      "severity": "error",
+      "condition": "if InstdAgt/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(InstdAgt/FinInstnId/BICFI)",
+      "field_paths": [
+        "GrpHdr/InstdAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "Ensure BIC is 8 or 11 characters following ISO 9362 format",
+      "category": "bic",
+      "references": [
+        "ISO 9362"
+      ]
+    },
+    {
+      "id": "PACS008-BC03",
+      "description": "Debtor agent BIC must be valid if present",
+      "severity": "error",
+      "condition": "if DbtrAgt/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(DbtrAgt/FinInstnId/BICFI)",
+      "field_paths": [
+        "CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "Ensure BIC is 8 or 11 characters following ISO 9362 format",
+      "category": "bic",
+      "references": [
+        "ISO 9362"
+      ]
+    },
+    {
+      "id": "PACS008-BC04",
+      "description": "Creditor agent BIC must be valid if present",
+      "severity": "error",
+      "condition": "if CdtrAgt/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(CdtrAgt/FinInstnId/BICFI)",
+      "field_paths": [
+        "CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "Ensure BIC is 8 or 11 characters following ISO 9362 format",
+      "category": "bic",
+      "references": [
+        "ISO 9362"
+      ]
+    },
+    {
+      "id": "PACS008-BC05",
+      "description": "Intermediary agent BIC must be valid if present",
+      "severity": "error",
+      "condition": "if IntrmyAgt1/FinInstnId/BICFI exists",
+      "assertion": "is_valid_bic(IntrmyAgt1/FinInstnId/BICFI)",
+      "field_paths": [
+        "CdtTrfTxInf/IntrmyAgt1/FinInstnId/BICFI"
+      ],
+      "suggestion": "Ensure BIC is 8 or 11 characters following ISO 9362 format",
+      "category": "bic",
+      "references": [
+        "ISO 9362"
+      ]
+    },
+    {
+      "id": "PACS008-IB01",
+      "description": "Debtor account IBAN must be valid if present",
+      "severity": "error",
+      "condition": "if DbtrAcct/Id/IBAN exists",
+      "assertion": "is_valid_iban(DbtrAcct/Id/IBAN)",
+      "field_paths": [
+        "CdtTrfTxInf/Dbtr/DbtrAcct/Id/IBAN"
+      ],
+      "suggestion": "Ensure IBAN passes Mod-97 check digit validation and matches country format",
+      "category": "iban",
+      "references": [
+        "ISO 13616"
+      ]
+    },
+    {
+      "id": "PACS008-IB02",
+      "description": "Creditor account IBAN must be valid if present",
+      "severity": "error",
+      "condition": "if CdtrAcct/Id/IBAN exists",
+      "assertion": "is_valid_iban(CdtrAcct/Id/IBAN)",
+      "field_paths": [
+        "CdtTrfTxInf/Cdtr/CdtrAcct/Id/IBAN"
+      ],
+      "suggestion": "Ensure IBAN passes Mod-97 check digit validation and matches country format",
+      "category": "iban",
+      "references": [
+        "ISO 13616"
+      ]
+    },
+    {
+      "id": "PACS008-PT01",
+      "description": "Debtor name must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "Dbtr/Nm is not empty",
+      "field_paths": [
+        "CdtTrfTxInf/Dbtr/Nm"
+      ],
+      "suggestion": "Provide the name of the ordering customer",
+      "category": "party"
+    },
+    {
+      "id": "PACS008-PT02",
+      "description": "Creditor name must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "Cdtr/Nm is not empty",
+      "field_paths": [
+        "CdtTrfTxInf/Cdtr/Nm"
+      ],
+      "suggestion": "Provide the name of the beneficiary customer",
+      "category": "party"
+    },
+    {
+      "id": "PACS008-PT03",
+      "description": "Debtor or debtor account must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "Dbtr exists OR DbtrAcct exists",
+      "field_paths": [
+        "CdtTrfTxInf/Dbtr",
+        "CdtTrfTxInf/DbtrAcct"
+      ],
+      "suggestion": "Provide either debtor party details or debtor account identification",
+      "category": "party"
+    },
+    {
+      "id": "PACS008-PT04",
+      "description": "Creditor or creditor account must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "Cdtr exists OR CdtrAcct exists",
+      "field_paths": [
+        "CdtTrfTxInf/Cdtr",
+        "CdtTrfTxInf/CdtrAcct"
+      ],
+      "suggestion": "Provide either creditor party details or creditor account identification",
+      "category": "party"
+    },
+    {
+      "id": "PACS008-PT05",
+      "description": "Debtor agent must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "DbtrAgt exists",
+      "field_paths": [
+        "CdtTrfTxInf/DbtrAgt"
+      ],
+      "suggestion": "Provide the debtor's financial institution (ordering institution)",
+      "category": "party"
+    },
+    {
+      "id": "PACS008-PT06",
+      "description": "Creditor agent must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "CdtrAgt exists",
+      "field_paths": [
+        "CdtTrfTxInf/CdtrAgt"
+      ],
+      "suggestion": "Provide the creditor's financial institution (beneficiary bank)",
+      "category": "party"
+    },
+    {
+      "id": "PACS008-RF01",
+      "description": "End-to-end ID must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "PmtId/EndToEndId is not empty",
+      "field_paths": [
+        "CdtTrfTxInf/PmtId/EndToEndId"
+      ],
+      "suggestion": "Provide a unique end-to-end reference for transaction tracking",
+      "category": "reference"
+    },
+    {
+      "id": "PACS008-RF02",
+      "description": "Instruction ID must be present",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "PmtId/InstrId is not empty",
+      "field_paths": [
+        "CdtTrfTxInf/PmtId/InstrId"
+      ],
+      "suggestion": "Provide a unique instruction identifier",
+      "category": "reference"
+    },
+    {
+      "id": "PACS008-RF03",
+      "description": "UETR must be valid UUID format if present",
+      "severity": "error",
+      "condition": "if PmtId/UETR exists",
+      "assertion": "is_valid_uuid(PmtId/UETR)",
+      "field_paths": [
+        "CdtTrfTxInf/PmtId/UETR"
+      ],
+      "suggestion": "Ensure UETR follows UUID format (e.g., 123e4567-e89b-12d3-a456-426614174000)",
+      "category": "reference",
+      "references": [
+        "SWIFT gpi"
+      ]
+    },
+    {
+      "id": "PACS008-CH01",
+      "description": "Charge bearer code must be valid",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "ChrgBr in ['CRED', 'DEBT', 'SHAR', 'SLEV']",
+      "field_paths": [
+        "CdtTrfTxInf/ChrgBr"
+      ],
+      "suggestion": "Use valid charge bearer code: CRED (beneficiary pays), DEBT (debtor pays), SHAR (shared), SLEV (service level)",
+      "category": "charges"
+    },
+    {
+      "id": "PACS008-CH02",
+      "description": "SEPA payments must use shared charge bearer",
+      "severity": "error",
+      "condition": "if PmtTpInf/SvcLvl/Cd == 'SEPA'",
+      "assertion": "ChrgBr == 'SHAR'",
+      "field_paths": [
+        "CdtTrfTxInf/PmtTpInf/SvcLvl/Cd",
+        "CdtTrfTxInf/ChrgBr"
+      ],
+      "suggestion": "SEPA payments require charge bearer to be SHAR (shared)",
+      "category": "charges",
+      "references": [
+        "SEPA Credit Transfer Rulebook"
+      ]
+    },
+    {
+      "id": "PACS008-CH03",
+      "description": "Charge amount must be positive if present",
+      "severity": "error",
+      "condition": "if ChrgsInf/Amt exists",
+      "assertion": "ChrgsInf/Amt > 0",
+      "field_paths": [
+        "CdtTrfTxInf/ChrgsInf/Amt"
+      ],
+      "suggestion": "Ensure charge amount is a positive value",
+      "category": "charges"
+    },
+    {
+      "id": "PACS008-SP01",
+      "description": "SEPA payment amount must not exceed 999999999.99 EUR",
+      "severity": "error",
+      "condition": "if PmtTpInf/SvcLvl/Cd == 'SEPA'",
+      "assertion": "IntrBkSttlmAmt <= 999999999.99 AND IntrBkSttlmAmt/@Ccy == 'EUR'",
+      "field_paths": [
+        "CdtTrfTxInf/PmtTpInf/SvcLvl/Cd",
+        "CdtTrfTxInf/IntrBkSttlmAmt",
+        "CdtTrfTxInf/IntrBkSttlmAmt/@Ccy"
+      ],
+      "suggestion": "SEPA payments must be in EUR and not exceed 999999999.99",
+      "category": "sepa",
+      "references": [
+        "SEPA Credit Transfer Rulebook"
+      ]
+    },
+    {
+      "id": "PACS008-SP02",
+      "description": "SEPA payment debtor and creditor agents must be in SEPA zone",
+      "severity": "error",
+      "condition": "if PmtTpInf/SvcLvl/Cd == 'SEPA'",
+      "assertion": "bic_country(DbtrAgt/FinInstnId/BICFI) in sepa_countries() AND bic_country(CdtrAgt/FinInstnId/BICFI) in sepa_countries()",
+      "field_paths": [
+        "CdtTrfTxInf/PmtTpInf/SvcLvl/Cd",
+        "CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI",
+        "CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+      ],
+      "suggestion": "Both debtor and creditor banks must be located in SEPA countries (EU27 + EEA + CH + UK + MC + SM + VA + AD)",
+      "category": "sepa",
+      "references": [
+        "SEPA Credit Transfer Rulebook"
+      ]
+    },
+    {
+      "id": "PACS008-SP03",
+      "description": "SEPA payment accounts must use IBAN",
+      "severity": "error",
+      "condition": "if PmtTpInf/SvcLvl/Cd == 'SEPA'",
+      "assertion": "DbtrAcct/Id/IBAN exists AND CdtrAcct/Id/IBAN exists",
+      "field_paths": [
+        "CdtTrfTxInf/PmtTpInf/SvcLvl/Cd",
+        "CdtTrfTxInf/DbtrAcct/Id/IBAN",
+        "CdtTrfTxInf/CdtrAcct/Id/IBAN"
+      ],
+      "suggestion": "SEPA payments require both debtor and creditor accounts to be identified by IBAN",
+      "category": "sepa",
+      "references": [
+        "SEPA Credit Transfer Rulebook"
+      ]
+    },
+    {
+      "id": "PACS008-RG01",
+      "description": "Large payments may require regulatory reporting",
+      "severity": "warning",
+      "condition": "if IntrBkSttlmAmt > 10000 AND (bic_country(DbtrAgt/FinInstnId/BICFI) in eu_countries() OR bic_country(CdtrAgt/FinInstnId/BICFI) in eu_countries())",
+      "assertion": "RgltryRptg exists OR InstrForCdtrAgt exists",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt",
+        "CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI",
+        "CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI",
+        "CdtTrfTxInf/RgltryRptg",
+        "CdtTrfTxInf/InstrForCdtrAgt"
+      ],
+      "suggestion": "Consider including regulatory reporting information for large cross-border EU payments",
+      "category": "regulatory"
+    },
+    {
+      "id": "PACS008-RG02",
+      "description": "High-value payments should include purpose code",
+      "severity": "warning",
+      "condition": "if IntrBkSttlmAmt > 50000",
+      "assertion": "PmtTpInf/CtgyPurp exists OR Purp exists",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt",
+        "CdtTrfTxInf/PmtTpInf/CtgyPurp",
+        "CdtTrfTxInf/Purp"
+      ],
+      "suggestion": "Include payment purpose information for high-value transactions to aid regulatory compliance",
+      "category": "regulatory"
+    },
+    {
+      "id": "PACS008-SM01",
+      "description": "Settlement method must be valid if present",
+      "severity": "error",
+      "condition": "if SttlmInf/SttlmMtd exists",
+      "assertion": "SttlmInf/SttlmMtd in ['INDA', 'INGA', 'COVE', 'CLRG']",
+      "field_paths": [
+        "CdtTrfTxInf/SttlmInf/SttlmMtd"
+      ],
+      "suggestion": "Use valid settlement method code: INDA (correspondent banking), INGA (instructing agent), COVE (cover method), CLRG (clearing system)",
+      "category": "settlement"
+    },
+    {
+      "id": "PACS008-SM02",
+      "description": "Clearing system must be present if settlement method is CLRG",
+      "severity": "error",
+      "condition": "if SttlmInf/SttlmMtd == 'CLRG'",
+      "assertion": "SttlmInf/ClrSys exists",
+      "field_paths": [
+        "CdtTrfTxInf/SttlmInf/SttlmMtd",
+        "CdtTrfTxInf/SttlmInf/ClrSys"
+      ],
+      "suggestion": "When using clearing system settlement method, specify the clearing system",
+      "category": "settlement"
+    },
+    {
+      "id": "PACS008-GH01",
+      "description": "Message ID must be present and unique",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "GrpHdr/MsgId is not empty",
+      "field_paths": [
+        "GrpHdr/MsgId"
+      ],
+      "suggestion": "Provide a unique message identifier (typically UUID format)",
+      "category": "header"
+    },
+    {
+      "id": "PACS008-GH02",
+      "description": "Number of transactions must match actual count",
+      "severity": "error",
+      "condition": "always",
+      "assertion": "GrpHdr/NbOfTxs == count(CdtTrfTxInf)",
+      "field_paths": [
+        "GrpHdr/NbOfTxs",
+        "CdtTrfTxInf"
+      ],
+      "suggestion": "Ensure NbOfTxs field matches the actual number of CdtTrfTxInf elements",
+      "category": "header"
+    },
+    {
+      "id": "PACS008-GH03",
+      "description": "Total interbank settlement amount should match sum if present",
+      "severity": "warning",
+      "condition": "if GrpHdr/TtlIntrBkSttlmAmt exists",
+      "assertion": "GrpHdr/TtlIntrBkSttlmAmt == sum(CdtTrfTxInf/IntrBkSttlmAmt)",
+      "field_paths": [
+        "GrpHdr/TtlIntrBkSttlmAmt",
+        "CdtTrfTxInf/IntrBkSttlmAmt"
+      ],
+      "suggestion": "Total settlement amount in header should equal sum of all transaction settlement amounts",
+      "category": "header"
+    },
+    {
+      "id": "PACS008-XF01",
+      "description": "Exchange rate must be positive if present",
+      "severity": "error",
+      "condition": "if XchgRate exists",
+      "assertion": "XchgRate > 0",
+      "field_paths": [
+        "CdtTrfTxInf/XchgRate"
+      ],
+      "suggestion": "Exchange rate must be a positive decimal value",
+      "category": "amount"
+    },
+    {
+      "id": "PACS008-XF02",
+      "description": "Exchange rate should be provided when currencies differ",
+      "severity": "warning",
+      "condition": "if InstdAmt exists AND IntrBkSttlmAmt/@Ccy != InstdAmt/@Ccy",
+      "assertion": "XchgRate exists",
+      "field_paths": [
+        "CdtTrfTxInf/IntrBkSttlmAmt/@Ccy",
+        "CdtTrfTxInf/InstdAmt/@Ccy",
+        "CdtTrfTxInf/XchgRate"
+      ],
+      "suggestion": "When settlement and instructed amounts have different currencies, provide the exchange rate",
+      "category": "amount"
+    }
+  ]
+}

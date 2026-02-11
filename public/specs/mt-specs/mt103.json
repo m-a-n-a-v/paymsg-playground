@@ -1,0 +1,647 @@
+{
+  "message_type": "MT103",
+  "name": "Single Customer Credit Transfer",
+  "description": "MT103 is used for single customer credit transfers. It is the most widely used SWIFT message for cross-border payments, instructing a financial institution to credit an account held with that institution. The message is sent by or on behalf of the ordering customer to the financial institution servicing the beneficiary customer.",
+  "blocks": {
+    "block1": {
+      "format": "{1:F01BANKBICAXXX0000000000}",
+      "description": "Basic Header - Contains application ID (F=FIN), service ID (01), sender BIC (12 chars), session number (4 digits), sequence number (6 digits)"
+    },
+    "block2": {
+      "format": "{2:I103BANKBICAXXXXN} or {2:O1031200231115BANKBICAXXXXN}",
+      "description": "Application Header - Input format (I) or Output format (O). Contains message type (103), destination BIC (for input) or sender BIC (for output), priority (N=normal, U=urgent), and optional delivery monitoring"
+    },
+    "block3": {
+      "format": "{3:{108:MUR}{121:UUID}}",
+      "description": "User Header (optional) - Contains tag-value pairs like 108:MUR (message user reference), 121:UETR (unique end-to-end transaction reference), 119:STP or REMIT (straight through processing or remittance information)"
+    },
+    "block4": {
+      "format": "{4:\\r\\n:20:REF\\r\\n:32A:DATE\\r\\n...\\r\\n-}",
+      "description": "Text Block - Contains the actual message fields in tag-value format. Each field starts with :NN[a]: followed by the value. Multi-line values continue on the next line without tag prefix. Block ends with dash on new line."
+    },
+    "block5": {
+      "format": "{5:{CHK:CHECKSUM}{TNG:}}",
+      "description": "Trailer (optional) - Contains checksums and system information like CHK (checksum), TNG (training), PDE (possible duplicate emission), DLM (delayed message), MRF (message reference), PDM (possible duplicate message)"
+    }
+  },
+  "fields": [
+    {
+      "tag": "20",
+      "name": "Transaction Reference Number",
+      "status": "M",
+      "options": [],
+      "max_length": 16,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,16}$",
+      "description": "Unique reference assigned by the sender to unambiguously identify the message. SWIFT character set X.",
+      "subfields": null
+    },
+    {
+      "tag": "13C",
+      "name": "Time Indication",
+      "status": "O",
+      "options": [],
+      "max_length": 13,
+      "format_pattern": "^/[A-Z]{4}/\\d{4}\\+\\d{4}$",
+      "description": "Time at which the message was created. Format: /CLSTIME/HHMM+HHMM or /RNCTIME/HHMM+HHMM or /SNDTIME/HHMM+HHMM where HHMM is time and +HHMM is UTC offset.",
+      "subfields": [
+        {
+          "name": "Code",
+          "position": "1-8",
+          "format": "/CLSTIME/ or /RNCTIME/ or /SNDTIME/",
+          "description": "Time qualifier: CLSTIME=closing time, RNCTIME=reconciliation time, SNDTIME=send time"
+        },
+        {
+          "name": "Time",
+          "position": "9-12",
+          "format": "HHMM",
+          "description": "Time in hours and minutes"
+        },
+        {
+          "name": "Sign",
+          "position": "13",
+          "format": "+ or -",
+          "description": "Sign of the UTC offset"
+        },
+        {
+          "name": "Offset",
+          "position": "14-17",
+          "format": "HHMM",
+          "description": "UTC offset in hours and minutes"
+        }
+      ]
+    },
+    {
+      "tag": "23B",
+      "name": "Bank Operation Code",
+      "status": "M",
+      "options": [],
+      "max_length": 4,
+      "format_pattern": "^[A-Z]{4}$",
+      "description": "Code identifying the type of operation. Common codes: CRED (credit transfer), SPAY (salary payment), SPRI (priority payment), SSTD (standing order). SWIFT character set X.",
+      "subfields": null
+    },
+    {
+      "tag": "23E",
+      "name": "Instruction Code",
+      "status": "O",
+      "options": [],
+      "max_length": 34,
+      "format_pattern": "^[A-Z]{4}(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,30})?$",
+      "description": "Instructions relating to the processing of the credit transfer. Can be repeated. Format: 4!c[/30x]. Common codes: CHQB (cheque book), HOLD (hold), INTC (intracompany), PHOB (phone beneficiary), PHOI (phone ordering institution), PHON (phone), TELB (phone beneficiary), TELE (phone), TELI (phone ordering institution).",
+      "subfields": null
+    },
+    {
+      "tag": "26T",
+      "name": "Transaction Type Code",
+      "status": "O",
+      "options": [],
+      "max_length": 3,
+      "format_pattern": "^[A-Z0-9]{3}$",
+      "description": "Specifies the type of transaction. 3-character alphanumeric code. Used for regulatory reporting and internal processing.",
+      "subfields": null
+    },
+    {
+      "tag": "32A",
+      "name": "Value Date, Currency Code, Amount",
+      "status": "M",
+      "options": [],
+      "max_length": 21,
+      "format_pattern": "^\\d{6}[A-Z]{3}\\d{1,15}(,\\d{1,2})?$",
+      "description": "Date on which the amount should be made available to the beneficiary, the currency code (ISO 4217), and the settlement amount. Format: 6!n3!a15d where 6!n is YYMMDD date, 3!a is currency code, 15d is amount with comma as decimal separator.",
+      "subfields": [
+        {
+          "name": "Value Date",
+          "position": "1-6",
+          "format": "YYMMDD",
+          "description": "Date on which the transfer should be executed"
+        },
+        {
+          "name": "Currency Code",
+          "position": "7-9",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (e.g., USD, EUR, GBP)"
+        },
+        {
+          "name": "Amount",
+          "position": "10-",
+          "format": "15d",
+          "description": "Settlement amount with comma as decimal separator (e.g., 1234567,89)"
+        }
+      ]
+    },
+    {
+      "tag": "33B",
+      "name": "Currency/Instructed Amount",
+      "status": "O",
+      "options": [],
+      "max_length": 18,
+      "format_pattern": "^[A-Z]{3}\\d{1,15}(,\\d{1,2})?$",
+      "description": "Currency and amount instructed. Used when the instructed amount differs from the settlement amount (e.g., currency conversion). Format: 3!a15d.",
+      "subfields": [
+        {
+          "name": "Currency Code",
+          "position": "1-3",
+          "format": "3!a",
+          "description": "ISO 4217 currency code"
+        },
+        {
+          "name": "Amount",
+          "position": "4-",
+          "format": "15d",
+          "description": "Instructed amount with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "36",
+      "name": "Exchange Rate",
+      "status": "O",
+      "options": [],
+      "max_length": 12,
+      "format_pattern": "^\\d{1,12}(,\\d{1,6})?$",
+      "description": "Exchange rate used for currency conversion. Format: 12d with comma as decimal separator.",
+      "subfields": null
+    },
+    {
+      "tag": "50A",
+      "name": "Ordering Customer - Account/BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Ordering customer identified by account number and BIC. Optional account line, then BIC on next line. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": [
+        {
+          "name": "Account",
+          "position": "1",
+          "format": "/34x",
+          "description": "Optional account number prefixed with /"
+        },
+        {
+          "name": "BIC",
+          "position": "2",
+          "format": "4!a2!a2!c[3!c]",
+          "description": "BIC code (8 or 11 characters)"
+        }
+      ]
+    },
+    {
+      "tag": "50F",
+      "name": "Ordering Customer - Structured",
+      "status": "O",
+      "options": ["F"],
+      "max_length": 140,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Ordering customer with structured party identifier. Multiple numbered lines (1-4): 1/Account, 2/Name&Address (up to 4x35), 3/Country&Town, 4/Date of birth. Format varies by line number.",
+      "subfields": null
+    },
+    {
+      "tag": "50K",
+      "name": "Ordering Customer - Name & Address",
+      "status": "O",
+      "options": ["K"],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Ordering customer identified by account and name/address. Optional account line, then up to 4 lines of 35 characters for name and address. Format: [/34x] (CRLF) 4*35x",
+      "subfields": [
+        {
+          "name": "Account",
+          "position": "1",
+          "format": "/34x",
+          "description": "Optional account number prefixed with /"
+        },
+        {
+          "name": "Name and Address",
+          "position": "2-5",
+          "format": "4*35x",
+          "description": "Up to 4 lines of 35 characters for customer name and address"
+        }
+      ]
+    },
+    {
+      "tag": "51A",
+      "name": "Sending Institution",
+      "status": "O",
+      "options": [],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Institution that is sending the message. Optional party identifier, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "52A",
+      "name": "Ordering Institution - BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Financial institution which orders the transfer on behalf of the ordering customer. Optional party identifier, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "52D",
+      "name": "Ordering Institution - Name & Address",
+      "status": "O",
+      "options": ["D"],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Ordering institution identified by name and address. Optional party identifier, then up to 4 lines of 35 characters. Format: [/34x] (CRLF) 4*35x",
+      "subfields": null
+    },
+    {
+      "tag": "53A",
+      "name": "Sender's Correspondent - BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Financial institution through which the sender will reimburse. Optional party identifier, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "53B",
+      "name": "Sender's Correspondent - Location",
+      "status": "O",
+      "options": ["B"],
+      "max_length": 69,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Sender's correspondent identified by party identifier and location. Format: [/34x] (CRLF) 35x",
+      "subfields": null
+    },
+    {
+      "tag": "53D",
+      "name": "Sender's Correspondent - Name & Address",
+      "status": "O",
+      "options": ["D"],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Sender's correspondent identified by name and address. Optional party identifier, then up to 4 lines of 35 characters. Format: [/34x] (CRLF) 4*35x",
+      "subfields": null
+    },
+    {
+      "tag": "54A",
+      "name": "Receiver's Correspondent - BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Financial institution through which the receiver will reimburse. Optional party identifier, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "54B",
+      "name": "Receiver's Correspondent - Location",
+      "status": "O",
+      "options": ["B"],
+      "max_length": 69,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Receiver's correspondent identified by party identifier and location. Format: [/34x] (CRLF) 35x",
+      "subfields": null
+    },
+    {
+      "tag": "54D",
+      "name": "Receiver's Correspondent - Name & Address",
+      "status": "O",
+      "options": ["D"],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Receiver's correspondent identified by name and address. Optional party identifier, then up to 4 lines of 35 characters. Format: [/34x] (CRLF) 4*35x",
+      "subfields": null
+    },
+    {
+      "tag": "55A",
+      "name": "Third Reimbursement Institution - BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Third institution involved in the reimbursement. Optional party identifier, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "55B",
+      "name": "Third Reimbursement Institution - Location",
+      "status": "O",
+      "options": ["B"],
+      "max_length": 69,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Third reimbursement institution identified by party identifier and location. Format: [/34x] (CRLF) 35x",
+      "subfields": null
+    },
+    {
+      "tag": "55D",
+      "name": "Third Reimbursement Institution - Name & Address",
+      "status": "O",
+      "options": ["D"],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Third reimbursement institution identified by name and address. Optional party identifier, then up to 4 lines of 35 characters. Format: [/34x] (CRLF) 4*35x",
+      "subfields": null
+    },
+    {
+      "tag": "56A",
+      "name": "Intermediary Institution - BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Financial institution between the ordering and beneficiary institutions. Optional party identifier, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "56C",
+      "name": "Intermediary Institution - Location",
+      "status": "O",
+      "options": ["C"],
+      "max_length": 35,
+      "format_pattern": "^/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}$",
+      "description": "Intermediary institution identified by party identifier only. Format: /34x",
+      "subfields": null
+    },
+    {
+      "tag": "56D",
+      "name": "Intermediary Institution - Name & Address",
+      "status": "O",
+      "options": ["D"],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Intermediary institution identified by name and address. Optional party identifier, then up to 4 lines of 35 characters. Format: [/34x] (CRLF) 4*35x",
+      "subfields": null
+    },
+    {
+      "tag": "57A",
+      "name": "Account With Institution - BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Financial institution servicing the beneficiary customer account. Optional party identifier, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "57B",
+      "name": "Account With Institution - Location",
+      "status": "O",
+      "options": ["B"],
+      "max_length": 69,
+      "format_pattern": "^(/[A-Za-z0-9]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Account with institution identified by party identifier and location. Format: [/34x] (CRLF) 35x",
+      "subfields": null
+    },
+    {
+      "tag": "57C",
+      "name": "Account With Institution - Party Identifier",
+      "status": "O",
+      "options": ["C"],
+      "max_length": 35,
+      "format_pattern": "^/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}$",
+      "description": "Account with institution identified by party identifier only. Format: /34x",
+      "subfields": null
+    },
+    {
+      "tag": "57D",
+      "name": "Account With Institution - Name & Address",
+      "status": "O",
+      "options": ["D"],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Account with institution identified by name and address. Optional party identifier, then up to 4 lines of 35 characters. Format: [/34x] (CRLF) 4*35x",
+      "subfields": null
+    },
+    {
+      "tag": "59",
+      "name": "Beneficiary Customer",
+      "status": "O",
+      "options": [],
+      "max_length": 175,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Customer receiving the funds. Optional account line, then up to 4 lines of 35 characters for name and address. Format: [/34x] (CRLF) 4*35x",
+      "subfields": [
+        {
+          "name": "Account",
+          "position": "1",
+          "format": "/34x",
+          "description": "Optional account number or IBAN prefixed with /"
+        },
+        {
+          "name": "Name and Address",
+          "position": "2-5",
+          "format": "4*35x",
+          "description": "Up to 4 lines of 35 characters for beneficiary name and address"
+        }
+      ]
+    },
+    {
+      "tag": "59A",
+      "name": "Beneficiary Customer - Account/BIC",
+      "status": "O",
+      "options": ["A"],
+      "max_length": 46,
+      "format_pattern": "^(/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,34}\\r\\n)?[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+      "description": "Beneficiary customer identified by account and BIC. Optional account line, then BIC. Format: [/34x] (CRLF) 4!a2!a2!c[3!c]",
+      "subfields": null
+    },
+    {
+      "tag": "59F",
+      "name": "Beneficiary Customer - Structured",
+      "status": "O",
+      "options": ["F"],
+      "max_length": 140,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Beneficiary customer with structured party identifier. Multiple numbered lines (1-4): 1/Account, 2/Name&Address (up to 4x35), 3/Country&Town, 4/Date of birth. Format varies by line number.",
+      "subfields": null
+    },
+    {
+      "tag": "70",
+      "name": "Remittance Information",
+      "status": "O",
+      "options": [],
+      "max_length": 140,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,140}$",
+      "description": "Information sent to the beneficiary. Up to 4 lines of 35 characters. Used for invoice numbers, reference information, payment purpose. Format: 4*35x",
+      "subfields": null
+    },
+    {
+      "tag": "71A",
+      "name": "Details of Charges",
+      "status": "M",
+      "options": [],
+      "max_length": 3,
+      "format_pattern": "^(BEN|OUR|SHA)$",
+      "description": "Specifies which party bears the charges. BEN = beneficiary pays all charges (not allowed in SEPA), OUR = ordering customer pays all charges, SHA = charges are shared (SEPA requires SHA).",
+      "subfields": null
+    },
+    {
+      "tag": "71F",
+      "name": "Sender's Charges",
+      "status": "O",
+      "options": [],
+      "max_length": 18,
+      "format_pattern": "^[A-Z]{3}\\d{1,15}(,\\d{1,2})?$",
+      "description": "Charges taken by the sender. Can appear multiple times. Format: 3!a15d (currency code + amount with comma as decimal separator).",
+      "subfields": [
+        {
+          "name": "Currency Code",
+          "position": "1-3",
+          "format": "3!a",
+          "description": "ISO 4217 currency code"
+        },
+        {
+          "name": "Amount",
+          "position": "4-",
+          "format": "15d",
+          "description": "Charge amount with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "71G",
+      "name": "Receiver's Charges",
+      "status": "O",
+      "options": [],
+      "max_length": 18,
+      "format_pattern": "^[A-Z]{3}\\d{1,15}(,\\d{1,2})?$",
+      "description": "Charges taken by the receiver. Format: 3!a15d (currency code + amount with comma as decimal separator).",
+      "subfields": [
+        {
+          "name": "Currency Code",
+          "position": "1-3",
+          "format": "3!a",
+          "description": "ISO 4217 currency code"
+        },
+        {
+          "name": "Amount",
+          "position": "4-",
+          "format": "15d",
+          "description": "Charge amount with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "72",
+      "name": "Sender to Receiver Information",
+      "status": "O",
+      "options": [],
+      "max_length": 210,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,210}$",
+      "description": "Additional information for the receiver. Up to 6 lines of 35 characters. Used for regulatory info, special instructions, additional references. Format: 6*35x",
+      "subfields": null
+    },
+    {
+      "tag": "77B",
+      "name": "Regulatory Reporting",
+      "status": "O",
+      "options": [],
+      "max_length": 105,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,105}$",
+      "description": "Information for regulatory reporting. Up to 3 lines of 35 characters. Required for certain jurisdictions and transaction types. Format: 3*35x",
+      "subfields": null
+    }
+  ],
+  "field_ordering": {
+    "description": "MT103 field ordering rules. Mandatory fields must appear in specific order. Optional fields have positioning constraints relative to mandatory fields and each other. One of field 50 options (A/F/K) must be present. Either field 59, 59A, or 59F must be present.",
+    "mandatory_sequence": [
+      "20",
+      "23B",
+      "32A",
+      "71A"
+    ],
+    "optional_sequences": [
+      {
+        "tags": ["13C"],
+        "position": "after 20, before 23B",
+        "notes": "Time indication appears between transaction reference and bank operation code"
+      },
+      {
+        "tags": ["23E"],
+        "position": "after 23B, before 26T",
+        "notes": "Instruction code can appear multiple times"
+      },
+      {
+        "tags": ["26T"],
+        "position": "after 23E, before 32A",
+        "notes": "Transaction type code before value date/amount"
+      },
+      {
+        "tags": ["33B"],
+        "position": "after 32A, before 36",
+        "notes": "Instructed amount appears after settlement amount"
+      },
+      {
+        "tags": ["36"],
+        "position": "after 33B, before 50",
+        "notes": "Exchange rate follows instructed amount if present"
+      },
+      {
+        "tags": ["50A", "50F", "50K"],
+        "position": "after 36, before 51A",
+        "notes": "Ordering customer - exactly one option (A/F/K) should be present"
+      },
+      {
+        "tags": ["51A"],
+        "position": "after 50, before 52",
+        "notes": "Sending institution between ordering customer and ordering institution"
+      },
+      {
+        "tags": ["52A", "52D"],
+        "position": "after 51A, before 53",
+        "notes": "Ordering institution - use one option (A or D)"
+      },
+      {
+        "tags": ["53A", "53B", "53D"],
+        "position": "after 52, before 54",
+        "notes": "Sender's correspondent - use one option (A/B/D)"
+      },
+      {
+        "tags": ["54A", "54B", "54D"],
+        "position": "after 53, before 55",
+        "notes": "Receiver's correspondent - use one option (A/B/D)"
+      },
+      {
+        "tags": ["55A", "55B", "55D"],
+        "position": "after 54, before 56",
+        "notes": "Third reimbursement institution - use one option (A/B/D)"
+      },
+      {
+        "tags": ["56A", "56C", "56D"],
+        "position": "after 55, before 57",
+        "notes": "Intermediary institution - use one option (A/C/D)"
+      },
+      {
+        "tags": ["57A", "57B", "57C", "57D"],
+        "position": "after 56, before 59",
+        "notes": "Account with institution - use one option (A/B/C/D)"
+      },
+      {
+        "tags": ["59", "59A", "59F"],
+        "position": "after 57, before 70",
+        "notes": "Beneficiary customer - exactly one option (no suffix/A/F) must be present"
+      },
+      {
+        "tags": ["70"],
+        "position": "after 59, before 71A",
+        "notes": "Remittance information before charges"
+      },
+      {
+        "tags": ["71F"],
+        "position": "after 71A, before 71G",
+        "notes": "Sender's charges - can appear multiple times"
+      },
+      {
+        "tags": ["71G"],
+        "position": "after 71F, before 72",
+        "notes": "Receiver's charges"
+      },
+      {
+        "tags": ["72"],
+        "position": "after 71G, before 77B",
+        "notes": "Sender to receiver information"
+      },
+      {
+        "tags": ["77B"],
+        "position": "after 72, last field",
+        "notes": "Regulatory reporting appears last if present"
+      }
+    ]
+  }
+}

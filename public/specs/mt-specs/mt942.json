@@ -1,0 +1,319 @@
+{
+  "message_type": "MT942",
+  "name": "Interim Transaction Report",
+  "description": "MT942 is used by financial institutions to provide intraday transaction information to their customers. Unlike MT940 (end-of-day statement), MT942 reports transactions as they occur during the business day. It does not contain opening and closing balances but instead provides floor limit indicators and current interim balance. This message is crucial for real-time cash management and liquidity monitoring.",
+  "blocks": {
+    "block1": {
+      "format": "{1:F01BANKBICAXXX0000000000}",
+      "description": "Basic Header - Contains application ID (F=FIN), service ID (01), sender BIC (12 chars), session number (4 digits), sequence number (6 digits)"
+    },
+    "block2": {
+      "format": "{2:I942BANKBICAXXXXN} or {2:O9421200231115BANKBICAXXXXN}",
+      "description": "Application Header - Input format (I) or Output format (O). Contains message type (942), destination BIC (for input) or sender BIC (for output), priority (N=normal, U=urgent)"
+    },
+    "block3": {
+      "format": "{3:{108:MUR}{121:UUID}}",
+      "description": "User Header (optional) - Contains tag-value pairs like 108:MUR (message user reference), 121:UETR (unique end-to-end transaction reference)"
+    },
+    "block4": {
+      "format": "{4:\\r\\n:20:REF\\r\\n:25:ACCT\\r\\n:28C:1\\r\\n:34F:...\\r\\n:13D:...\\r\\n:61:...\\r\\n:86:...\\r\\n:90D:...\\r\\n:90C:...\\r\\n-}",
+      "description": "Text Block - Contains the actual interim transaction report fields. Field 61 (Statement Line) and 86 (Information to Account Owner) can repeat for each transaction. Block ends with dash on new line."
+    },
+    "block5": {
+      "format": "{5:{CHK:CHECKSUM}{TNG:}}",
+      "description": "Trailer (optional) - Contains checksums and system information like CHK (checksum), TNG (training)"
+    }
+  },
+  "fields": [
+    {
+      "tag": "20",
+      "name": "Transaction Reference Number",
+      "status": "M",
+      "options": [],
+      "max_length": 16,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,16}$",
+      "description": "Unique reference assigned by the account servicing institution to unambiguously identify this interim report. SWIFT character set X.",
+      "subfields": null
+    },
+    {
+      "tag": "25",
+      "name": "Account Identification",
+      "status": "M",
+      "options": [],
+      "max_length": 35,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Account number of the account for which the interim report is sent. Can be IBAN or other account number format. SWIFT character set X.",
+      "subfields": null
+    },
+    {
+      "tag": "25P",
+      "name": "Account Identification (with BIC)",
+      "status": "M",
+      "options": ["P"],
+      "max_length": 47,
+      "format_pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Alternative to field 25. Contains account servicing institution BIC followed by account number. Format: BIC/Account. Either field 25 or 25P must be present, but not both.",
+      "subfields": [
+        {
+          "name": "BIC",
+          "position": "1-11",
+          "format": "4!a2!a2!c[3!c]",
+          "description": "BIC of the account servicing institution (8 or 11 characters)"
+        },
+        {
+          "name": "Account Number",
+          "position": "after /",
+          "format": "35x",
+          "description": "Account number up to 35 characters"
+        }
+      ]
+    },
+    {
+      "tag": "28C",
+      "name": "Statement Number/Sequence Number",
+      "status": "M",
+      "options": [],
+      "max_length": 10,
+      "format_pattern": "^\\d{1,5}(/\\d{1,5})?$",
+      "description": "Statement number and optionally sequence number within that statement. For MT942, this is typically the report number for the day. Format: StatementNumber[/SequenceNumber]. Example: 1/5 means report 1, page 5.",
+      "subfields": [
+        {
+          "name": "Statement Number",
+          "position": "1-5",
+          "format": "5n",
+          "description": "Sequential number of the interim report"
+        },
+        {
+          "name": "Sequence Number",
+          "position": "after /",
+          "format": "5n",
+          "description": "Optional sequence/page number within the report"
+        }
+      ]
+    },
+    {
+      "tag": "13D",
+      "name": "Date/Time Indication",
+      "status": "O",
+      "options": [],
+      "max_length": 18,
+      "format_pattern": "^\\d{6}\\+\\d{4}$",
+      "description": "Date and time when the interim report was generated. Format: YYMMDD+HHMM (date plus time in local time with + separator). Example: 231115+1430 means November 15, 2023 at 14:30 local time.",
+      "subfields": [
+        {
+          "name": "Date",
+          "position": "1-6",
+          "format": "YYMMDD",
+          "description": "Date of the report (6 digits)"
+        },
+        {
+          "name": "Time",
+          "position": "8-11",
+          "format": "HHMM",
+          "description": "Time of the report in 24-hour format (4 digits after + separator)"
+        }
+      ]
+    },
+    {
+      "tag": "34F",
+      "name": "Floor Limit Indicator",
+      "status": "O",
+      "options": [],
+      "max_length": 18,
+      "format_pattern": "^[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Indicates the currency and floor limit amount. Only transactions above this floor limit are reported in field 61. Transactions below this amount are not individually listed but are included in the total summations (90D/90C). Format: Currency (3 alpha) + Amount (15d with comma decimal).",
+      "subfields": [
+        {
+          "name": "Currency",
+          "position": "1-3",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Amount",
+          "position": "4-end",
+          "format": "15d",
+          "description": "Floor limit amount with comma as decimal separator (e.g., 10000,00)"
+        }
+      ]
+    },
+    {
+      "tag": "61",
+      "name": "Statement Line",
+      "status": "O",
+      "options": [],
+      "max_length": 65,
+      "format_pattern": "^\\d{6}(\\d{4})?[DC][A-Z]?[0-9,]{1,15}[A-Z][A-Z0-9]{3}[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{0,16}(//[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{0,16})?(\\r\\n[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{0,34})?$",
+      "description": "Details of a single transaction (debit or credit) on the account that exceeds the floor limit. This field can repeat for each transaction above the floor limit. Format is identical to MT940 field 61: value date, entry date, debit/credit mark, currency code, amount, transaction type code, customer reference, bank reference, and optional supplementary details. Usually followed by field 86 with additional information.",
+      "subfields": [
+        {
+          "name": "Value Date",
+          "position": "1-6",
+          "format": "YYMMDD",
+          "description": "Date on which the entry is to be valued (date funds are available or debited)"
+        },
+        {
+          "name": "Entry Date",
+          "position": "7-10",
+          "format": "MMDD",
+          "description": "Optional entry date (month and day) when the entry was booked to the account. Omitted if same as value date."
+        },
+        {
+          "name": "Debit/Credit Mark",
+          "position": "after date",
+          "format": "D, C, RD, RC",
+          "description": "D = debit, C = credit, RD = reversal of debit, RC = reversal of credit"
+        },
+        {
+          "name": "Funds Code",
+          "position": "after D/C mark",
+          "format": "1a",
+          "description": "Optional third character indicating availability: omitted = standard availability, D = funds on hold pending documents"
+        },
+        {
+          "name": "Amount",
+          "position": "after funds code",
+          "format": "15d",
+          "description": "Transaction amount with comma as decimal separator (e.g., 15000,00)"
+        },
+        {
+          "name": "Transaction Type",
+          "position": "after amount",
+          "format": "1!a3!c",
+          "description": "Transaction type identification code: 1 letter (N=SWIFT, F=non-SWIFT) + 3 characters identifying the transaction type (e.g., NCHK=check, NTRF=transfer, NSTD=standing order)"
+        },
+        {
+          "name": "Customer Reference",
+          "position": "after type",
+          "format": "16x",
+          "description": "Reference for the account owner (customer) - up to 16 characters"
+        },
+        {
+          "name": "Bank Reference",
+          "position": "after //",
+          "format": "//16x",
+          "description": "Optional bank reference preceded by // - up to 16 characters after the //"
+        },
+        {
+          "name": "Supplementary Details",
+          "position": "continuation line",
+          "format": "34x",
+          "description": "Optional additional information on a continuation line - up to 34 characters"
+        }
+      ]
+    },
+    {
+      "tag": "86",
+      "name": "Information to Account Owner",
+      "status": "O",
+      "options": [],
+      "max_length": 390,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,390}$",
+      "description": "Additional information about the transaction described in the preceding field 61. This field usually follows each field 61 and can contain structured or unstructured information about the transaction (payer/payee name, remittance information, bank codes, etc.). Format: up to 6 lines of 65 characters each. Many banks use structured formats with subfield codes (e.g., ?20, ?21, ?32, ?60 for specific data elements).",
+      "subfields": null
+    },
+    {
+      "tag": "90D",
+      "name": "Number and Sum of Debit Entries",
+      "status": "O",
+      "options": [],
+      "max_length": 24,
+      "format_pattern": "^\\d{1,5}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Total number of debit entries and their sum for the reporting period. Includes ALL debits (both above and below the floor limit). Format: Number of entries (max 5 digits) + Currency (3 alpha) + Total amount (15d with comma decimal).",
+      "subfields": [
+        {
+          "name": "Number of Entries",
+          "position": "1-5",
+          "format": "5n",
+          "description": "Total count of debit entries (including those below floor limit)"
+        },
+        {
+          "name": "Currency",
+          "position": "after count",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Total Amount",
+          "position": "after currency",
+          "format": "15d",
+          "description": "Sum of all debit amounts with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "90C",
+      "name": "Number and Sum of Credit Entries",
+      "status": "O",
+      "options": [],
+      "max_length": 24,
+      "format_pattern": "^\\d{1,5}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Total number of credit entries and their sum for the reporting period. Includes ALL credits (both above and below the floor limit). Format: Number of entries (max 5 digits) + Currency (3 alpha) + Total amount (15d with comma decimal).",
+      "subfields": [
+        {
+          "name": "Number of Entries",
+          "position": "1-5",
+          "format": "5n",
+          "description": "Total count of credit entries (including those below floor limit)"
+        },
+        {
+          "name": "Currency",
+          "position": "after count",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Total Amount",
+          "position": "after currency",
+          "format": "15d",
+          "description": "Sum of all credit amounts with comma as decimal separator"
+        }
+      ]
+    }
+  ],
+  "field_ordering": {
+    "description": "MT942 field ordering rules: mandatory fields in sequence, followed by optional date/time and floor limit, then repeating statement lines (61+86 pairs for transactions above floor limit), then summary totals",
+    "mandatory_sequence": [
+      "20",
+      "25 or 25P",
+      "28C"
+    ],
+    "optional_sequences": [
+      {
+        "description": "Report metadata",
+        "fields": [
+          "34F",
+          "13D"
+        ],
+        "position": "after mandatory fields, before statement lines",
+        "notes": "Field 34F (Floor Limit Indicator) and 13D (Date/Time Indication) provide context for the interim report. They appear before any transaction details."
+      },
+      {
+        "description": "Statement line entries (repeating)",
+        "pattern": "61 followed by optional 86",
+        "repeatable": true,
+        "notes": "Each transaction ABOVE the floor limit (if specified in 34F) is represented by field 61 (Statement Line), which can be followed by field 86 (Information to Account Owner) with additional details. This pair can repeat for each qualifying transaction. Transactions below the floor limit are NOT individually listed but are included in the summary totals (90D/90C)."
+      },
+      {
+        "description": "Summary totals",
+        "fields": [
+          "90D",
+          "90C"
+        ],
+        "position": "after all statement lines",
+        "notes": "Field 90D (Number and Sum of Debit Entries) and field 90C (Number and Sum of Credit Entries) provide totals for ALL transactions during the reporting period, including those below the floor limit that were not individually listed in field 61."
+      }
+    ]
+  },
+  "usage_notes": {
+    "interim_vs_final": "MT942 is an intraday/interim transaction report, whereas MT940 is an end-of-day statement. MT942 can be sent multiple times during the day to provide real-time transaction updates. MT940 is typically sent once at end of business day.",
+    "no_balances": "Unlike MT940, MT942 does not contain opening balance (60F/60M) or closing balance (62F/62M) fields. The focus is on transaction activity, not account balances. For current balance information, the account owner must rely on other messages or channels.",
+    "floor_limit_concept": "Field 34F specifies a threshold amount. Only transactions exceeding this amount are listed individually in field 61. Smaller transactions are not detailed but are still included in the summary counts and totals in fields 90D and 90C. This reduces message size for high-volume accounts.",
+    "summary_totals": "Fields 90D and 90C provide the complete picture: they include ALL debits and credits, both those listed in field 61 (above floor limit) and those not listed (below floor limit). The number of entries in 90D/90C may exceed the count of field 61 entries.",
+    "time_indication": "Field 13D provides the exact date and time when the report was generated. This is crucial for intraday reporting where multiple MT942 messages may be sent for the same account on the same day at different times.",
+    "field_61_structure": "Field 61 in MT942 has identical structure to MT940. The same parsing logic applies for extracting value date, entry date, D/C mark, funds code, amount, transaction type, references, and supplementary details.",
+    "field_86_structure": "Field 86 content is not strictly standardized, identical to MT940. Banks often use proprietary structured formats with codes like ?20 (description), ?30 (sender BIC), ?32 (sender name), ?60 (beneficiary), etc.",
+    "transaction_type_codes": "Transaction type in field 61 uses SWIFT Bank Transaction Codes: first character N (SWIFT) or F (non-SWIFT), followed by 3-character code family/subfamily/type (e.g., NCHK=check, NTRF=transfer, NSTD=standing order, NDDT=direct debit).",
+    "use_case": "MT942 is primarily used for real-time cash management, liquidity monitoring, and fraud detection. Treasury departments use it to track large intraday movements without waiting for end-of-day MT940 statements."
+  }
+}

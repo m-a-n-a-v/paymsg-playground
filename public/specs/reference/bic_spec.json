@@ -1,0 +1,480 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BIC/SWIFT Code Specification",
+  "description": "Business Identifier Code (BIC) structure and validation rules. BIC (also known as SWIFT code) is the ISO 9362 standard for identifying financial institutions.",
+  "version": "1.0.0",
+  "structure": {
+    "description": "BIC consists of 8 or 11 characters divided into 4 components",
+    "components": [
+      {
+        "name": "institution_code",
+        "position": "1-4",
+        "length": 4,
+        "format": "alpha",
+        "description": "Institution code (bank code) - 4 letters identifying the financial institution",
+        "character_set": "A-Z (uppercase letters only)",
+        "examples": ["DEUT", "BNPA", "CHAS", "BOFA", "HSBC"]
+      },
+      {
+        "name": "country_code",
+        "position": "5-6",
+        "length": 2,
+        "format": "alpha",
+        "description": "Country code - ISO 3166-1 alpha-2 country code",
+        "character_set": "A-Z (uppercase letters only)",
+        "validation": "Must be a valid ISO 3166-1 alpha-2 code",
+        "examples": ["DE", "FR", "US", "GB", "CH"]
+      },
+      {
+        "name": "location_code",
+        "position": "7-8",
+        "length": 2,
+        "format": "alphanumeric",
+        "description": "Location code - identifies the city or location of the institution",
+        "character_set": "A-Z and 0-9 (uppercase letters and digits)",
+        "notes": "0 in location code indicates test BIC (not for production use)",
+        "examples": ["FF", "PP", "33", "3N", "XX"]
+      },
+      {
+        "name": "branch_code",
+        "position": "9-11",
+        "length": 3,
+        "format": "alphanumeric",
+        "optional": true,
+        "description": "Branch code - identifies a specific branch of the institution",
+        "character_set": "A-Z and 0-9 (uppercase letters and digits)",
+        "conventions": [
+          "'XXX' represents the head office (primary location)",
+          "When omitted, the BIC is 8 characters and refers to the head office",
+          "Branch codes are institution-specific and not standardized"
+        ],
+        "examples": ["XXX", "001", "A23", "NYC", "000"]
+      }
+    ],
+    "length_rules": {
+      "8_character": {
+        "description": "8-character BIC (BIC8) refers to the head office of the institution",
+        "format": "AAAABBCC",
+        "usage": "Used when referring to the institution as a whole or when the specific branch is not relevant",
+        "note": "When processing, BIC8 can be treated as equivalent to BIC11 with 'XXX' branch"
+      },
+      "11_character": {
+        "description": "11-character BIC (BIC11) identifies a specific branch of the institution",
+        "format": "AAAABBCCDDD",
+        "usage": "Used when a specific branch must be identified in the transaction",
+        "note": "If branch is 'XXX', it explicitly refers to the head office"
+      }
+    }
+  },
+  "validation_rules": [
+    {
+      "rule": "length_check",
+      "description": "BIC must be exactly 8 or 11 characters",
+      "valid_lengths": [8, 11]
+    },
+    {
+      "rule": "institution_code_format",
+      "description": "Characters 1-4 must be uppercase letters A-Z",
+      "pattern": "^[A-Z]{4}"
+    },
+    {
+      "rule": "country_code_format",
+      "description": "Characters 5-6 must be uppercase letters A-Z",
+      "pattern": "^[A-Z]{4}[A-Z]{2}"
+    },
+    {
+      "rule": "country_code_validity",
+      "description": "Country code must be a valid ISO 3166-1 alpha-2 code",
+      "validation": "Must exist in countries.json reference data"
+    },
+    {
+      "rule": "location_code_format",
+      "description": "Characters 7-8 must be uppercase letters A-Z or digits 0-9",
+      "pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}"
+    },
+    {
+      "rule": "test_bic_detection",
+      "description": "Location code '0' in position 8 indicates a test BIC (not for production)",
+      "pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]0",
+      "severity": "warning"
+    },
+    {
+      "rule": "branch_code_format",
+      "description": "If present, characters 9-11 must be uppercase letters A-Z or digits 0-9",
+      "pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$"
+    },
+    {
+      "rule": "no_spaces",
+      "description": "BIC must not contain spaces or special characters",
+      "validation": "Only A-Z and 0-9 allowed"
+    }
+  ],
+  "examples": {
+    "valid": [
+      {
+        "bic": "DEUTDEFF",
+        "description": "Deutsche Bank, Germany, Frankfurt (head office)",
+        "institution": "Deutsche Bank AG",
+        "country": "DE (Germany)",
+        "location": "FF (Frankfurt)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "DEUTDEFFXXX",
+        "description": "Deutsche Bank, Germany, Frankfurt (head office, explicit)",
+        "institution": "Deutsche Bank AG",
+        "country": "DE (Germany)",
+        "location": "FF (Frankfurt)",
+        "branch": "XXX (head office)",
+        "length": 11,
+        "note": "Equivalent to DEUTDEFF (BIC8)"
+      },
+      {
+        "bic": "DEUTDEFF500",
+        "description": "Deutsche Bank, Germany, Frankfurt, Branch 500",
+        "institution": "Deutsche Bank AG",
+        "country": "DE (Germany)",
+        "location": "FF (Frankfurt)",
+        "branch": "500 (specific branch)",
+        "length": 11
+      },
+      {
+        "bic": "BNPAFRPP",
+        "description": "BNP Paribas, France, Paris (head office)",
+        "institution": "BNP Paribas",
+        "country": "FR (France)",
+        "location": "PP (Paris)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "BNPAFRPPXXX",
+        "description": "BNP Paribas, France, Paris (head office, explicit)",
+        "institution": "BNP Paribas",
+        "country": "FR (France)",
+        "location": "PP (Paris)",
+        "branch": "XXX (head office)",
+        "length": 11
+      },
+      {
+        "bic": "CHASUS33",
+        "description": "JPMorgan Chase Bank, USA (head office)",
+        "institution": "JPMorgan Chase Bank N.A.",
+        "country": "US (United States)",
+        "location": "33 (New York)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "CHASUS33XXX",
+        "description": "JPMorgan Chase Bank, USA (head office, explicit)",
+        "institution": "JPMorgan Chase Bank N.A.",
+        "country": "US (United States)",
+        "location": "33 (New York)",
+        "branch": "XXX (head office)",
+        "length": 11
+      },
+      {
+        "bic": "BOFAUS3N",
+        "description": "Bank of America, USA (head office)",
+        "institution": "Bank of America N.A.",
+        "country": "US (United States)",
+        "location": "3N (Charlotte)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "BOFAUS6S",
+        "description": "Bank of America, USA, San Francisco location",
+        "institution": "Bank of America N.A.",
+        "country": "US (United States)",
+        "location": "6S (San Francisco)",
+        "branch": "None (head office for this location)",
+        "length": 8
+      },
+      {
+        "bic": "COBADEFF",
+        "description": "Commerzbank, Germany, Frankfurt (head office)",
+        "institution": "Commerzbank AG",
+        "country": "DE (Germany)",
+        "location": "FF (Frankfurt)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "HSBCGB2L",
+        "description": "HSBC Bank, United Kingdom, London (head office)",
+        "institution": "HSBC Bank plc",
+        "country": "GB (United Kingdom)",
+        "location": "2L (London)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "HSBCGB2LXXX",
+        "description": "HSBC Bank, United Kingdom, London (head office, explicit)",
+        "institution": "HSBC Bank plc",
+        "country": "GB (United Kingdom)",
+        "location": "2L (London)",
+        "branch": "XXX (head office)",
+        "length": 11
+      },
+      {
+        "bic": "UBSWCHZH",
+        "description": "UBS Switzerland, Zurich (head office)",
+        "institution": "UBS Switzerland AG",
+        "country": "CH (Switzerland)",
+        "location": "ZH (Zurich)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "UBSWCHZH80A",
+        "description": "UBS Switzerland, Zurich, branch 80A",
+        "institution": "UBS Switzerland AG",
+        "country": "CH (Switzerland)",
+        "location": "ZH (Zurich)",
+        "branch": "80A (specific branch)",
+        "length": 11
+      },
+      {
+        "bic": "CRESCHZZ",
+        "description": "Credit Suisse, Switzerland, Zurich (head office)",
+        "institution": "Credit Suisse AG",
+        "country": "CH (Switzerland)",
+        "location": "ZZ (Zurich)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "BARCLAYS",
+        "description": "Barclays Bank, United Kingdom (invalid - missing country/location)",
+        "institution": "Barclays Bank PLC",
+        "country": "GB (United Kingdom)",
+        "location": "22 (London)",
+        "branch": "None (head office)",
+        "length": 8,
+        "note": "This is NOT a valid BIC format - kept for reference only"
+      },
+      {
+        "bic": "BARCGB22",
+        "description": "Barclays Bank, United Kingdom, London (head office)",
+        "institution": "Barclays Bank PLC",
+        "country": "GB (United Kingdom)",
+        "location": "22 (London)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "CITIUS33",
+        "description": "Citibank, USA (head office)",
+        "institution": "Citibank N.A.",
+        "country": "US (United States)",
+        "location": "33 (New York)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "WFBIUS6S",
+        "description": "Wells Fargo Bank, USA, San Francisco (head office)",
+        "institution": "Wells Fargo Bank N.A.",
+        "country": "US (United States)",
+        "location": "6S (San Francisco)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "PNBPUS3N",
+        "description": "PNC Bank, USA (head office)",
+        "institution": "PNC Bank N.A.",
+        "country": "US (United States)",
+        "location": "3N (Pittsburgh)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "NATAAU33",
+        "description": "National Australia Bank, Australia (head office)",
+        "institution": "National Australia Bank Limited",
+        "country": "AU (Australia)",
+        "location": "33 (Melbourne)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "ANZBAU3M",
+        "description": "Australia and New Zealand Banking Group, Australia, Melbourne",
+        "institution": "ANZ Bank",
+        "country": "AU (Australia)",
+        "location": "3M (Melbourne)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "RBOSGGSX",
+        "description": "Royal Bank of Scotland (RBS), Singapore",
+        "institution": "The Royal Bank of Scotland plc",
+        "country": "SG (Singapore)",
+        "location": "SX (Singapore)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "SMBCJPJT",
+        "description": "Sumitomo Mitsui Banking Corporation, Japan, Tokyo",
+        "institution": "Sumitomo Mitsui Banking Corporation",
+        "country": "JP (Japan)",
+        "location": "JT (Tokyo)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "BKCHCNBJ",
+        "description": "Bank of China, China, Beijing (head office)",
+        "institution": "Bank of China",
+        "country": "CN (China)",
+        "location": "BJ (Beijing)",
+        "branch": "None (head office)",
+        "length": 8
+      },
+      {
+        "bic": "ICBKCNBJ",
+        "description": "Industrial and Commercial Bank of China, Beijing",
+        "institution": "ICBC",
+        "country": "CN (China)",
+        "location": "BJ (Beijing)",
+        "branch": "None (head office)",
+        "length": 8
+      }
+    ],
+    "invalid": [
+      {
+        "bic": "DEUT",
+        "reason": "Too short - only 4 characters (missing country, location)",
+        "explanation": "BIC must be 8 or 11 characters. This only contains the institution code."
+      },
+      {
+        "bic": "DEUTDE",
+        "reason": "Too short - only 6 characters (missing location code)",
+        "explanation": "BIC must be 8 or 11 characters. Country code present but location code missing."
+      },
+      {
+        "bic": "DEUTDEFF1",
+        "reason": "Invalid length - 9 characters",
+        "explanation": "BIC must be exactly 8 or 11 characters, not 9. Branch code is incomplete."
+      },
+      {
+        "bic": "DEUTDEFF12",
+        "reason": "Invalid length - 10 characters",
+        "explanation": "BIC must be exactly 8 or 11 characters, not 10. Branch code is incomplete."
+      },
+      {
+        "bic": "deutdeff",
+        "reason": "Lowercase letters not allowed",
+        "explanation": "BIC must use uppercase letters only. All alphabetic characters must be A-Z."
+      },
+      {
+        "bic": "DEUT99FF",
+        "reason": "Digits not allowed in institution code (positions 1-4)",
+        "explanation": "Institution code must be 4 uppercase letters (A-Z). Digits are only allowed in location and branch codes."
+      },
+      {
+        "bic": "DEUTD3FF",
+        "reason": "Digit not allowed in country code (positions 5-6)",
+        "explanation": "Country code must be 2 uppercase letters matching ISO 3166-1 alpha-2 format."
+      },
+      {
+        "bic": "DEUTXXFF",
+        "reason": "Invalid country code 'XX'",
+        "explanation": "Country code must be a valid ISO 3166-1 alpha-2 code. 'XX' is not assigned to any country."
+      },
+      {
+        "bic": "DEUT DEFF",
+        "reason": "Spaces not allowed",
+        "explanation": "BIC must be a continuous string without spaces or special characters."
+      },
+      {
+        "bic": "DEUT-DEFF",
+        "reason": "Special characters not allowed",
+        "explanation": "BIC can only contain uppercase letters A-Z and digits 0-9. Hyphens and other special characters are not permitted."
+      },
+      {
+        "bic": "DEUTDEFF___",
+        "reason": "Underscores not allowed in branch code",
+        "explanation": "Branch code must be alphanumeric (A-Z, 0-9). Underscores and other special characters are not permitted."
+      }
+    ]
+  },
+  "special_cases": {
+    "test_bics": {
+      "description": "BICs with '0' in position 8 of the location code are test BICs",
+      "usage": "Used in test and development environments only, not for production transactions",
+      "examples": [
+        {
+          "bic": "DEUTDE0F",
+          "description": "Test BIC for Deutsche Bank, Germany"
+        },
+        {
+          "bic": "BNPAFR0P",
+          "description": "Test BIC for BNP Paribas, France"
+        }
+      ],
+      "validation": "Production systems should reject or flag test BICs with warnings"
+    },
+    "head_office_convention": {
+      "description": "The branch code 'XXX' and omitted branch code both refer to the head office",
+      "equivalence": "BIC8 (e.g., DEUTDEFF) is equivalent to BIC11 with XXX branch (e.g., DEUTDEFFXXX)",
+      "processing_rule": "When comparing BICs, DEUTDEFF and DEUTDEFFXXX should be treated as identical",
+      "normalization": "Systems may normalize all BIC8 to BIC11 with 'XXX' appended for consistent processing"
+    },
+    "passive_participants": {
+      "description": "Some institutions are registered with SWIFT but are passive participants (receive only)",
+      "note": "Passive participants can receive payments but cannot initiate them on the SWIFT network"
+    }
+  },
+  "common_mistakes": [
+    {
+      "mistake": "Using lowercase letters",
+      "correction": "Always use uppercase A-Z for all alphabetic characters"
+    },
+    {
+      "mistake": "Including spaces or hyphens",
+      "correction": "BIC is a continuous string with no separators"
+    },
+    {
+      "mistake": "Using BIC9 or BIC10 formats",
+      "correction": "Only BIC8 and BIC11 are valid lengths"
+    },
+    {
+      "mistake": "Assuming all banks have a BIC",
+      "correction": "Only institutions participating in the SWIFT network have BICs. Domestic-only banks may not have one."
+    },
+    {
+      "mistake": "Using institution name instead of BIC code",
+      "correction": "Use the actual 8 or 11 character code, not the bank name"
+    },
+    {
+      "mistake": "Using invalid country codes",
+      "correction": "Country code must be a valid ISO 3166-1 alpha-2 code (check countries.json)"
+    },
+    {
+      "mistake": "Confusing BIC with IBAN",
+      "correction": "BIC identifies the institution, IBAN identifies an account at that institution"
+    }
+  ],
+  "usage_notes": [
+    "BIC is required in SWIFT MT messages (fields like 50A, 52A, 56A, 57A, etc.)",
+    "BIC is required in ISO 20022 MX messages (elements like DbtrAgt/FinInstnId/BICFI, CdtrAgt/FinInstnId/BICFI)",
+    "For SEPA Credit Transfers, BIC is optional if IBAN is provided (SEPA countries can route by IBAN alone)",
+    "For non-SEPA international payments, BIC is typically mandatory",
+    "When validating BICs, check against the SWIFT BIC Directory for active/registered codes",
+    "BICs can be deactivated or reassigned - always use current reference data",
+    "National Bank Codes (NBC) or Routing Numbers are NOT the same as BICs and cannot be used interchangeably"
+  ],
+  "references": [
+    "ISO 9362:2022 - Banking — Banking telecommunication messages — Business identifier code (BIC)",
+    "SWIFT BIC Directory (requires SWIFT membership for full access)",
+    "ISO 3166-1 - Codes for the representation of names of countries and their subdivisions"
+  ]
+}

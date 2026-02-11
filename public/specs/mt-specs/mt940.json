@@ -1,0 +1,414 @@
+{
+  "message_type": "MT940",
+  "name": "Customer Statement Message",
+  "description": "MT940 is used by financial institutions to provide detailed account statement information to their customers. It contains opening and closing balances, and details of all entries booked to the account during the statement period. This is the primary message for end-of-day account reconciliation and cash management.",
+  "blocks": {
+    "block1": {
+      "format": "{1:F01BANKBICAXXX0000000000}",
+      "description": "Basic Header - Contains application ID (F=FIN), service ID (01), sender BIC (12 chars), session number (4 digits), sequence number (6 digits)"
+    },
+    "block2": {
+      "format": "{2:I940BANKBICAXXXXN} or {2:O9401200231115BANKBICAXXXXN}",
+      "description": "Application Header - Input format (I) or Output format (O). Contains message type (940), destination BIC (for input) or sender BIC (for output), priority (N=normal, U=urgent)"
+    },
+    "block3": {
+      "format": "{3:{108:MUR}{121:UUID}}",
+      "description": "User Header (optional) - Contains tag-value pairs like 108:MUR (message user reference), 121:UETR (unique end-to-end transaction reference)"
+    },
+    "block4": {
+      "format": "{4:\\r\\n:20:REF\\r\\n:25:ACCT\\r\\n:60F:...\\r\\n:61:...\\r\\n:86:...\\r\\n:62F:...\\r\\n-}",
+      "description": "Text Block - Contains the actual statement fields. Field 61 (Statement Line) and 86 (Information to Account Owner) can repeat for each transaction. Block ends with dash on new line."
+    },
+    "block5": {
+      "format": "{5:{CHK:CHECKSUM}{TNG:}}",
+      "description": "Trailer (optional) - Contains checksums and system information like CHK (checksum), TNG (training)"
+    }
+  },
+  "fields": [
+    {
+      "tag": "20",
+      "name": "Transaction Reference Number",
+      "status": "M",
+      "options": [],
+      "max_length": 16,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,16}$",
+      "description": "Unique reference assigned by the account servicing institution to unambiguously identify the statement. SWIFT character set X.",
+      "subfields": null
+    },
+    {
+      "tag": "25",
+      "name": "Account Identification",
+      "status": "M",
+      "options": [],
+      "max_length": 35,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Account number of the account for which the statement is sent. Can be IBAN or other account number format. SWIFT character set X.",
+      "subfields": null
+    },
+    {
+      "tag": "25P",
+      "name": "Account Identification (with BIC)",
+      "status": "M",
+      "options": ["P"],
+      "max_length": 47,
+      "format_pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?/[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{1,35}$",
+      "description": "Alternative to field 25. Contains account servicing institution BIC followed by account number. Format: BIC/Account. Either field 25 or 25P must be present, but not both.",
+      "subfields": [
+        {
+          "name": "BIC",
+          "position": "1-11",
+          "format": "4!a2!a2!c[3!c]",
+          "description": "BIC of the account servicing institution (8 or 11 characters)"
+        },
+        {
+          "name": "Account Number",
+          "position": "after /",
+          "format": "35x",
+          "description": "Account number up to 35 characters"
+        }
+      ]
+    },
+    {
+      "tag": "28C",
+      "name": "Statement Number/Sequence Number",
+      "status": "M",
+      "options": [],
+      "max_length": 10,
+      "format_pattern": "^\\d{1,5}(/\\d{1,5})?$",
+      "description": "Statement number and optionally sequence number within that statement. Format: StatementNumber[/SequenceNumber]. Example: 235/1 means statement 235, page 1.",
+      "subfields": [
+        {
+          "name": "Statement Number",
+          "position": "1-5",
+          "format": "5n",
+          "description": "Sequential number of the statement"
+        },
+        {
+          "name": "Sequence Number",
+          "position": "after /",
+          "format": "5n",
+          "description": "Optional sequence/page number within the statement"
+        }
+      ]
+    },
+    {
+      "tag": "60F",
+      "name": "Opening Balance (Final)",
+      "status": "M",
+      "options": ["F"],
+      "max_length": 26,
+      "format_pattern": "^[DC]\\d{6}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Opening balance of the account. This is the final balance from the previous statement. Format: D/C + Date (YYMMDD) + Currency (3 alpha) + Amount (15d with comma decimal). Either 60F or 60M must be present, but not both.",
+      "subfields": [
+        {
+          "name": "Debit/Credit Mark",
+          "position": "1",
+          "format": "D or C",
+          "description": "D = debit balance (negative), C = credit balance (positive)"
+        },
+        {
+          "name": "Date",
+          "position": "2-7",
+          "format": "YYMMDD",
+          "description": "Date of the balance (6 digits)"
+        },
+        {
+          "name": "Currency",
+          "position": "8-10",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Amount",
+          "position": "11-end",
+          "format": "15d",
+          "description": "Balance amount with comma as decimal separator (e.g., 12345,67)"
+        }
+      ]
+    },
+    {
+      "tag": "60M",
+      "name": "Opening Balance (Intermediate)",
+      "status": "M",
+      "options": ["M"],
+      "max_length": 26,
+      "format_pattern": "^[DC]\\d{6}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Opening balance for an intermediate statement (not the first statement of the day). Format is identical to 60F. Either 60F or 60M must be present, but not both.",
+      "subfields": [
+        {
+          "name": "Debit/Credit Mark",
+          "position": "1",
+          "format": "D or C",
+          "description": "D = debit balance (negative), C = credit balance (positive)"
+        },
+        {
+          "name": "Date",
+          "position": "2-7",
+          "format": "YYMMDD",
+          "description": "Date of the balance (6 digits)"
+        },
+        {
+          "name": "Currency",
+          "position": "8-10",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Amount",
+          "position": "11-end",
+          "format": "15d",
+          "description": "Balance amount with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "61",
+      "name": "Statement Line",
+      "status": "O",
+      "options": [],
+      "max_length": 65,
+      "format_pattern": "^\\d{6}(\\d{4})?[DC][A-Z]?[0-9,]{1,15}[A-Z][A-Z0-9]{3}[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{0,16}(//[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{0,16})?(\\r\\n[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ ]{0,34})?$",
+      "description": "Details of a single transaction (debit or credit) on the account. This field can repeat for each transaction in the statement period. Complex format with value date, entry date, debit/credit mark, currency code, amount, transaction type code, customer reference, bank reference, and optional supplementary details. Usually followed by field 86 with additional information.",
+      "subfields": [
+        {
+          "name": "Value Date",
+          "position": "1-6",
+          "format": "YYMMDD",
+          "description": "Date on which the entry is to be valued (date funds are available or debited)"
+        },
+        {
+          "name": "Entry Date",
+          "position": "7-10",
+          "format": "MMDD",
+          "description": "Optional entry date (month and day) when the entry was booked to the account. Omitted if same as value date."
+        },
+        {
+          "name": "Debit/Credit Mark",
+          "position": "after date",
+          "format": "D, C, RD, RC",
+          "description": "D = debit, C = credit, RD = reversal of debit, RC = reversal of credit"
+        },
+        {
+          "name": "Funds Code",
+          "position": "after D/C mark",
+          "format": "1a",
+          "description": "Optional third character indicating availability: omitted = standard availability, D = funds on hold pending documents"
+        },
+        {
+          "name": "Amount",
+          "position": "after funds code",
+          "format": "15d",
+          "description": "Transaction amount with comma as decimal separator (e.g., 1500,00)"
+        },
+        {
+          "name": "Transaction Type",
+          "position": "after amount",
+          "format": "1!a3!c",
+          "description": "Transaction type identification code: 1 letter (N=SWIFT, F=non-SWIFT) + 3 characters identifying the transaction type (e.g., NCHK=check, NTRF=transfer, NSTD=standing order)"
+        },
+        {
+          "name": "Customer Reference",
+          "position": "after type",
+          "format": "16x",
+          "description": "Reference for the account owner (customer) - up to 16 characters"
+        },
+        {
+          "name": "Bank Reference",
+          "position": "after //",
+          "format": "//16x",
+          "description": "Optional bank reference preceded by // - up to 16 characters after the //"
+        },
+        {
+          "name": "Supplementary Details",
+          "position": "continuation line",
+          "format": "34x",
+          "description": "Optional additional information on a continuation line - up to 34 characters"
+        }
+      ]
+    },
+    {
+      "tag": "86",
+      "name": "Information to Account Owner",
+      "status": "O",
+      "options": [],
+      "max_length": 390,
+      "format_pattern": "^[A-Za-z0-9/\\-\\?:\\(\\)\\.,'\\+ \\r\\n]{1,390}$",
+      "description": "Additional information about the transaction described in the preceding field 61. This field usually follows each field 61 and can contain structured or unstructured information about the transaction (payer/payee name, remittance information, bank codes, etc.). Format: up to 6 lines of 65 characters each. Many banks use structured formats with subfield codes (e.g., ?20, ?21, ?32, ?60 for specific data elements).",
+      "subfields": null
+    },
+    {
+      "tag": "62F",
+      "name": "Closing Balance (Final)",
+      "status": "M",
+      "options": ["F"],
+      "max_length": 26,
+      "format_pattern": "^[DC]\\d{6}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Closing balance of the account for this statement. This is the final balance at the end of the statement period. Format is identical to 60F. Either 62F or 62M must be present, but not both.",
+      "subfields": [
+        {
+          "name": "Debit/Credit Mark",
+          "position": "1",
+          "format": "D or C",
+          "description": "D = debit balance (negative), C = credit balance (positive)"
+        },
+        {
+          "name": "Date",
+          "position": "2-7",
+          "format": "YYMMDD",
+          "description": "Date of the closing balance (6 digits)"
+        },
+        {
+          "name": "Currency",
+          "position": "8-10",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Amount",
+          "position": "11-end",
+          "format": "15d",
+          "description": "Balance amount with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "62M",
+      "name": "Closing Balance (Intermediate)",
+      "status": "M",
+      "options": ["M"],
+      "max_length": 26,
+      "format_pattern": "^[DC]\\d{6}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Closing balance for an intermediate statement. Format is identical to 60M and 62F. Either 62F or 62M must be present, but not both.",
+      "subfields": [
+        {
+          "name": "Debit/Credit Mark",
+          "position": "1",
+          "format": "D or C",
+          "description": "D = debit balance (negative), C = credit balance (positive)"
+        },
+        {
+          "name": "Date",
+          "position": "2-7",
+          "format": "YYMMDD",
+          "description": "Date of the balance (6 digits)"
+        },
+        {
+          "name": "Currency",
+          "position": "8-10",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Amount",
+          "position": "11-end",
+          "format": "15d",
+          "description": "Balance amount with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "64",
+      "name": "Closing Available Balance",
+      "status": "O",
+      "options": [],
+      "max_length": 26,
+      "format_pattern": "^[DC]\\d{6}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Available balance on the closing date (actual balance minus any holds or reserved amounts). This is the balance available for use by the account owner. Format is identical to balance fields.",
+      "subfields": [
+        {
+          "name": "Debit/Credit Mark",
+          "position": "1",
+          "format": "D or C",
+          "description": "D = debit balance (negative), C = credit balance (positive)"
+        },
+        {
+          "name": "Date",
+          "position": "2-7",
+          "format": "YYMMDD",
+          "description": "Date of the available balance (6 digits)"
+        },
+        {
+          "name": "Currency",
+          "position": "8-10",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Amount",
+          "position": "11-end",
+          "format": "15d",
+          "description": "Available balance amount with comma as decimal separator"
+        }
+      ]
+    },
+    {
+      "tag": "65",
+      "name": "Forward Available Balance",
+      "status": "O",
+      "options": [],
+      "max_length": 26,
+      "format_pattern": "^[DC]\\d{6}[A-Z]{3}[0-9,]{1,15}$",
+      "description": "Available balance on a future date (projected available balance considering pending transactions). Can appear multiple times for different future dates. Format is identical to balance fields.",
+      "subfields": [
+        {
+          "name": "Debit/Credit Mark",
+          "position": "1",
+          "format": "D or C",
+          "description": "D = debit balance (negative), C = credit balance (positive)"
+        },
+        {
+          "name": "Date",
+          "position": "2-7",
+          "format": "YYMMDD",
+          "description": "Future date of the projected available balance (6 digits)"
+        },
+        {
+          "name": "Currency",
+          "position": "8-10",
+          "format": "3!a",
+          "description": "ISO 4217 currency code (3 letters)"
+        },
+        {
+          "name": "Amount",
+          "position": "11-end",
+          "format": "15d",
+          "description": "Projected available balance amount with comma as decimal separator"
+        }
+      ]
+    }
+  ],
+  "field_ordering": {
+    "description": "MT940 field ordering rules: mandatory fields in sequence, followed by repeating statement lines (61+86 pairs), then closing balances",
+    "mandatory_sequence": [
+      "20",
+      "25 or 25P",
+      "28C",
+      "60F or 60M"
+    ],
+    "optional_sequences": [
+      {
+        "description": "Statement line entries (repeating)",
+        "pattern": "61 followed by optional 86",
+        "repeatable": true,
+        "notes": "Each transaction on the statement is represented by field 61 (Statement Line), which can be followed by field 86 (Information to Account Owner) with additional details. This pair can repeat for each transaction in the statement."
+      },
+      {
+        "description": "Closing balances",
+        "fields": [
+          "62F or 62M",
+          "64",
+          "65"
+        ],
+        "position": "after all statement lines",
+        "notes": "Closing balance (62F/62M) is mandatory. Field 64 (Closing Available Balance) and field 65 (Forward Available Balance) are optional. Field 65 can repeat for multiple future dates."
+      }
+    ]
+  },
+  "usage_notes": {
+    "balance_consistency": "The closing balance (62F/62M) must equal the opening balance (60F/60M) plus the sum of all credit entries minus the sum of all debit entries from field 61. This is a key validation rule.",
+    "statement_types": "Field 60F and 62F indicate a final (first/last) statement. Fields 60M and 62M indicate intermediate statements when multiple statements are sent for the same day.",
+    "field_61_complexity": "Field 61 has the most complex structure in MT940. Careful parsing is required to extract value date, entry date, D/C mark, funds code, amount, transaction type, references, and supplementary details.",
+    "field_86_structure": "Field 86 content is not strictly standardized. Banks often use proprietary structured formats with codes like ?20 (description), ?21-?29 (continuation), ?30 (sender BIC), ?32 (sender name), ?60 (beneficiary), etc. Parsers should handle both structured and unstructured formats.",
+    "transaction_type_codes": "Transaction type in field 61 uses SWIFT Bank Transaction Codes: first character N (SWIFT) or F (non-SWIFT), followed by 3-character code family/subfamily/type (e.g., NCHK=check, NTRF=transfer, NSTD=standing order, NDDT=direct debit)."
+  }
+}

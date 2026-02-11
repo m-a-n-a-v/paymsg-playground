@@ -1,0 +1,185 @@
+{
+  "message_type": "camt.052.001.10",
+  "description": "Business validation rules for camt.052.001.10 (Bank to Customer Account Report - Interim)",
+  "rules": [
+    {
+      "id": "CAMT052-AM01",
+      "description": "Entry amount must be positive",
+      "severity": "error",
+      "category": "amount",
+      "condition": "always",
+      "assertion": "Rpt/Ntry/Amt > 0",
+      "field_paths": [
+        "Rpt/Ntry/Amt"
+      ],
+      "suggestion": "Entry amount must be greater than zero. Use the CdtDbtInd field to indicate credit or debit direction.",
+      "examples": [
+        "Valid: <Amt Ccy=\"EUR\">500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>",
+        "Invalid: <Amt Ccy=\"EUR\">-500.00</Amt> (use positive amount with DBIT indicator)"
+      ]
+    },
+    {
+      "id": "CAMT052-AM02",
+      "description": "Entry amount must respect currency decimal precision",
+      "severity": "error",
+      "category": "amount",
+      "condition": "always",
+      "assertion": "decimal_places(Rpt/Ntry/Amt) <= currency_decimal_places(Rpt/Ntry/Amt/@Ccy)",
+      "field_paths": [
+        "Rpt/Ntry/Amt",
+        "Rpt/Ntry/Amt/@Ccy"
+      ],
+      "suggestion": "Ensure the number of decimal places matches the currency's standard precision. For example, USD/EUR use 2 decimals, JPY uses 0 decimals, BHD uses 3 decimals.",
+      "references": [
+        "ISO 4217 currency decimal places specification"
+      ]
+    },
+    {
+      "id": "CAMT052-DT01",
+      "description": "Value date must not be in the future",
+      "severity": "warning",
+      "category": "date",
+      "condition": "always",
+      "assertion": "Rpt/Ntry/ValDt/Dt <= today()",
+      "field_paths": [
+        "Rpt/Ntry/ValDt/Dt"
+      ],
+      "suggestion": "Value date should typically be today or in the past for interim reports. Future value dates may be valid for expected transactions but should be verified."
+    },
+    {
+      "id": "CAMT052-DT02",
+      "description": "Report creation timestamp must not be in the future",
+      "severity": "error",
+      "category": "date",
+      "condition": "always",
+      "assertion": "Rpt/CreDtTm <= now()",
+      "field_paths": [
+        "Rpt/CreDtTm"
+      ],
+      "suggestion": "Report creation date/time should be the current timestamp or earlier. Future timestamps are not valid."
+    },
+    {
+      "id": "CAMT052-CY01",
+      "description": "Entry currency code must be a valid ISO 4217 currency code",
+      "severity": "error",
+      "category": "currency",
+      "condition": "always",
+      "assertion": "is_valid_currency_code(Rpt/Ntry/Amt/@Ccy)",
+      "field_paths": [
+        "Rpt/Ntry/Amt/@Ccy"
+      ],
+      "suggestion": "Ensure the currency code is a valid 3-letter ISO 4217 code such as USD, EUR, GBP, JPY.",
+      "references": [
+        "ISO 4217 currency codes"
+      ]
+    },
+    {
+      "id": "CAMT052-IB01",
+      "description": "Account IBAN must be valid when present",
+      "severity": "error",
+      "category": "iban",
+      "condition": "if Rpt/Acct/Id/IBAN exists",
+      "assertion": "is_valid_iban(Rpt/Acct/Id/IBAN)",
+      "field_paths": [
+        "Rpt/Acct/Id/IBAN"
+      ],
+      "suggestion": "IBAN must follow ISO 13616 format with valid country code and Mod-97 check digits.",
+      "references": [
+        "ISO 13616 IBAN format"
+      ]
+    },
+    {
+      "id": "CAMT052-RF01",
+      "description": "Report identification must be present and non-empty",
+      "severity": "error",
+      "category": "reference",
+      "condition": "always",
+      "assertion": "exists(Rpt/Id) and length(Rpt/Id) > 0",
+      "field_paths": [
+        "Rpt/Id"
+      ],
+      "suggestion": "Report ID is mandatory and must uniquely identify this interim account report.",
+      "examples": [
+        "<Id>RPT20260210-001</Id>"
+      ]
+    },
+    {
+      "id": "CAMT052-RF02",
+      "description": "Entry reference must be present for each entry",
+      "severity": "error",
+      "category": "reference",
+      "condition": "always",
+      "assertion": "exists(Rpt/Ntry/NtryRef) and length(Rpt/Ntry/NtryRef) > 0",
+      "field_paths": [
+        "Rpt/Ntry/NtryRef"
+      ],
+      "suggestion": "Each entry must have a unique reference for tracking and reconciliation purposes."
+    },
+    {
+      "id": "CAMT052-AC01",
+      "description": "Account identification must be present",
+      "severity": "error",
+      "category": "account",
+      "condition": "always",
+      "assertion": "exists(Rpt/Acct/Id)",
+      "field_paths": [
+        "Rpt/Acct/Id"
+      ],
+      "suggestion": "Account identification (IBAN or other ID) must be specified to identify which account this report covers."
+    },
+    {
+      "id": "CAMT052-TS01",
+      "description": "Total debit entry count must match actual debit entries when present",
+      "severity": "error",
+      "category": "summary",
+      "condition": "if Rpt/TxsSummary/TtlDbtNtries/NbOfNtries exists",
+      "assertion": "Rpt/TxsSummary/TtlDbtNtries/NbOfNtries == count(Rpt/Ntry[CdtDbtInd='DBIT'])",
+      "field_paths": [
+        "Rpt/TxsSummary/TtlDbtNtries/NbOfNtries",
+        "Rpt/Ntry/CdtDbtInd"
+      ],
+      "suggestion": "The total debit entry count in TxsSummary must match the actual number of debit entries in the report."
+    },
+    {
+      "id": "CAMT052-TS02",
+      "description": "Total credit entry count must match actual credit entries when present",
+      "severity": "error",
+      "category": "summary",
+      "condition": "if Rpt/TxsSummary/TtlCdtNtries/NbOfNtries exists",
+      "assertion": "Rpt/TxsSummary/TtlCdtNtries/NbOfNtries == count(Rpt/Ntry[CdtDbtInd='CRDT'])",
+      "field_paths": [
+        "Rpt/TxsSummary/TtlCdtNtries/NbOfNtries",
+        "Rpt/Ntry/CdtDbtInd"
+      ],
+      "suggestion": "The total credit entry count in TxsSummary must match the actual number of credit entries in the report."
+    },
+    {
+      "id": "CAMT052-TS03",
+      "description": "Total debit sum must match sum of all debit entry amounts when present",
+      "severity": "error",
+      "category": "summary",
+      "condition": "if Rpt/TxsSummary/TtlDbtNtries/Sum exists",
+      "assertion": "Rpt/TxsSummary/TtlDbtNtries/Sum == sum(Rpt/Ntry[CdtDbtInd='DBIT']/Amt)",
+      "field_paths": [
+        "Rpt/TxsSummary/TtlDbtNtries/Sum",
+        "Rpt/Ntry/Amt",
+        "Rpt/Ntry/CdtDbtInd"
+      ],
+      "suggestion": "The total debit sum in TxsSummary must equal the sum of all debit entry amounts in the report."
+    },
+    {
+      "id": "CAMT052-TS04",
+      "description": "Total credit sum must match sum of all credit entry amounts when present",
+      "severity": "error",
+      "category": "summary",
+      "condition": "if Rpt/TxsSummary/TtlCdtNtries/Sum exists",
+      "assertion": "Rpt/TxsSummary/TtlCdtNtries/Sum == sum(Rpt/Ntry[CdtDbtInd='CRDT']/Amt)",
+      "field_paths": [
+        "Rpt/TxsSummary/TtlCdtNtries/Sum",
+        "Rpt/Ntry/Amt",
+        "Rpt/Ntry/CdtDbtInd"
+      ],
+      "suggestion": "The total credit sum in TxsSummary must equal the sum of all credit entry amounts in the report."
+    }
+  ]
+}

@@ -30,7 +30,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
+    /* Node types for test environment */
+    "types": ["vite/client", "node"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

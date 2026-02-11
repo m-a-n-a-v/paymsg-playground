@@ -1,0 +1,542 @@
+{
+  "message_pair": "MT202/pacs.009.001.10",
+  "mt_type": "MT202",
+  "mx_type": "pacs.009.001.10",
+  "description": "Field mapping between MT202 (General Financial Institution Transfer) and pacs.009.001.10 (FinancialInstitutionCreditTransfer). MT202 is used for bank-to-bank transfers and cover payments backing customer transfers (MT103). pacs.009 is the ISO 20022 XML equivalent for direct financial institution credit transfers. Unlike MT103/pacs.008, this message type does not identify individual customers - only financial institutions.",
+  "mapping_notes": [
+    "MT202 is bank-to-bank only: no customer party fields (50/59 from MT103). All parties are financial institutions.",
+    "MT202 field 21 (Related Reference) is mandatory and links to underlying customer payment (e.g., MT103 field 20).",
+    "MT202 has no charge bearer fields (71A/71F/71G). Charges are handled through separate messages or bilateral agreements.",
+    "MT202 uses SWIFT character set (ASCII-based), while pacs.009 supports full Unicode. Character set conversion may be required.",
+    "MT202 field lengths are generally shorter than pacs.009 equivalents. MT to MX translation is usually lossless, but MX to MT may require truncation.",
+    "MT202 uses comma as decimal separator (e.g., 1234,56), while pacs.009 uses period (e.g., 1234.56)",
+    "BIC codes in MT202 are 8 or 11 characters, matching ISO 9362. pacs.009 uses BICFI type with same format.",
+    "pacs.009 supports batch transactions (multiple CdtTrfTxInf entries), while MT202 is always single transaction",
+    "MT202 is commonly used as 'cover payment' for MT103 - field 21 references the underlying customer transfer",
+    "Some pacs.009 mandatory fields have no MT202 equivalent and must be defaulted (e.g., CreDtTm, NbOfTxs)",
+    "MT202 Block 3 tag 121 (UETR) maps directly to pacs.009 UETR element for end-to-end tracking"
+  ],
+  "mappings": [
+    {
+      "mt_tag": "20",
+      "mt_field_name": "Transaction Reference Number",
+      "mx_path": "CdtTrfTxInf/PmtId/InstrId",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 20 maps to Instruction Identification. This is the unique reference assigned by the instructing party to unambiguously identify the message.",
+      "notes": "MT202 allows 16 chars, pacs.009 allows 35 chars. MT to MX is lossless. MX to MT may require truncation if > 16 chars.",
+      "truncation_rule": "If MX InstrId > 16 chars, truncate to 16 chars for MT field 20"
+    },
+    {
+      "mt_tag": "20",
+      "mt_field_name": "Transaction Reference Number",
+      "mx_path": "CdtTrfTxInf/PmtId/EndToEndId",
+      "transform_type": "conditional",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "none",
+      "transform_details": "If MT202 Block 3 tag 121 (UETR) is absent, use field 20 value as EndToEndId. If UETR is present, use UETR for EndToEndId instead.",
+      "notes": "EndToEndId is mandatory in pacs.009. Priority: 1) UETR from Block 3:121, 2) field 20 value, 3) generated value if neither available"
+    },
+    {
+      "mt_tag": "21",
+      "mt_field_name": "Related Reference",
+      "mx_path": "CdtTrfTxInf/PmtId/EndToEndId",
+      "transform_type": "conditional",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 21 contains the reference to the related message (typically MT103 field 20 for cover payments). Can be used as EndToEndId to maintain traceability to the underlying customer payment.",
+      "notes": "In cover payment scenarios, field 21 links MT202 to MT103. If UETR is absent and field 20 is used for InstrId, use field 21 for EndToEndId to preserve the link to the customer payment.",
+      "examples": [
+        {
+          "mt_value": "MT103REF123456",
+          "mx_value": "MT103REF123456",
+          "notes": "Related reference from underlying MT103 message"
+        }
+      ]
+    },
+    {
+      "mt_tag": "21",
+      "mt_field_name": "Related Reference",
+      "mx_path": "CdtTrfTxInf/InstrForNxtAgt/InstrInf",
+      "transform_type": "conditional",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "none",
+      "transform_details": "Alternatively, MT202 field 21 can be mapped to Instruction for Next Agent with structured format /REF/value to preserve the related reference for bank-to-bank communication.",
+      "notes": "Use this mapping when EndToEndId is populated from another source (UETR or field 20). Include as /REF/ structured code in InstrForNxtAgt."
+    },
+    {
+      "mt_tag": "121",
+      "mt_field_name": "UETR (Block 3 User Header)",
+      "mx_path": "CdtTrfTxInf/PmtId/UETR",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "Block 3 tag 121 contains the Unique End-to-End Transaction Reference (UUID format). Maps directly to UETR element.",
+      "notes": "UETR is optional in both formats but strongly recommended for payment tracking (SWIFT gpi requirement). In cover payments, UETR should match between MT103 and MT202."
+    },
+    {
+      "mt_tag": "13C",
+      "mt_field_name": "Time Indication",
+      "mx_path": "GrpHdr/CreDtTm",
+      "transform_type": "derived",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 13C time indication (format: /SNDTIME/HHMM+offset or /CLSTIME/HHMM+offset) can be used to derive GrpHdr CreDtTm if no other source available. Combine with field 32A date. More commonly, CreDtTm is set to current timestamp at translation time.",
+      "notes": "Field 13C is optional. If present, use SNDTIME (send time) or CLSTIME (closing time) for message creation timestamp. Otherwise, use translation time as CreDtTm."
+    },
+    {
+      "mt_tag": "32A",
+      "mt_field_name": "Value Date, Currency Code, Amount",
+      "mx_path": "CdtTrfTxInf/IntrBkSttlmDt",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 32A date component (YYMMDD format, first 6 chars) maps to Interbank Settlement Date. Convert YYMMDD to ISO date format YYYY-MM-DD.",
+      "notes": "Date conversion: YY >= 50 -> 19YY, YY < 50 -> 20YY (common SWIFT convention). Example: 260210 -> 2026-02-10",
+      "examples": [
+        {
+          "mt_value": "260210USD5000000,00",
+          "mx_value": "2026-02-10",
+          "notes": "Extract date portion 260210, convert to 2026-02-10"
+        }
+      ]
+    },
+    {
+      "mt_tag": "32A",
+      "mt_field_name": "Value Date, Currency Code, Amount",
+      "mx_path": "CdtTrfTxInf/IntrBkSttlmAmt",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 32A currency and amount components map to Interbank Settlement Amount. Currency is chars 7-9 (3-letter ISO 4217 code). Amount follows currency (chars 10+), with comma as decimal separator in MT, period in MX.",
+      "notes": "Amount conversion: MT uses comma decimal (5000000,00), MX uses period (5000000.00). Currency becomes Ccy attribute of IntrBkSttlmAmt.",
+      "examples": [
+        {
+          "mt_value": "260210USD5000000,00",
+          "mx_value": "<IntrBkSttlmAmt Ccy=\"USD\">5000000.00</IntrBkSttlmAmt>",
+          "notes": "Extract currency USD and amount 5000000,00, convert comma to period"
+        }
+      ]
+    },
+    {
+      "mt_tag": "52A",
+      "mt_field_name": "Ordering Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/InstgAgt/FinInstnId/BICFI",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 52A BIC maps to Instructing Agent Financial Institution BIC. This is the financial institution ordering the transfer (the debtor institution in pacs.009 terminology).",
+      "notes": "Field 52 identifies the ordering institution. In pacs.009, this is InstgAgt rather than DbtrAgt (since this is institution-to-institution, not customer payment)."
+    },
+    {
+      "mt_tag": "52A",
+      "mt_field_name": "Ordering Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/InstgAgt/FinInstnId/PstlAdr/AdrLine",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 52A optional party identifier (line 1, prefixed with /) can be mapped to InstgAgt postal address as additional information. Remove leading slash.",
+      "notes": "Party identifier in field 52A is optional. If present, it may be an account number or other identifier. Can be included in PstlAdr or omitted."
+    },
+    {
+      "mt_tag": "52D",
+      "mt_field_name": "Ordering Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/InstgAgt/FinInstnId/Nm",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 52D name and address (up to 4 lines of 35 chars) maps to Instructing Agent name (first non-party-identifier line) and postal address (remaining lines).",
+      "truncation_rule": "MX FinInstnId/Nm max 140 chars, PstlAdr/AdrLine max 7x70 chars. MT allows 4x35=140 chars.",
+      "notes": "Field 52D used when ordering institution doesn't have a BIC or BIC is unknown. Parse: optional party identifier line, then name line(s), then address line(s)."
+    },
+    {
+      "mt_tag": "52D",
+      "mt_field_name": "Ordering Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/InstgAgt/FinInstnId/PstlAdr/AdrLine",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 52D address lines (after name) map to Instructing Agent Postal Address AdrLine elements. Each address line becomes separate AdrLine.",
+      "truncation_rule": "MX allows up to 7 AdrLine elements of 70 chars each. MT has 4 lines total of 35 chars each.",
+      "notes": "Parse 52D: skip party identifier line if present, use next line(s) for name, remaining lines for address."
+    },
+    {
+      "mt_tag": "53A",
+      "mt_field_name": "Sender's Correspondent - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/InstgAgtAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 53A indicates the account held by sender's correspondent. Optional party identifier (account line) maps to account identification. BIC implies the institution but is not explicitly mapped in pacs.009.",
+      "notes": "Field 53 specifies reimbursement routing in correspondent banking. pacs.009 doesn't have direct equivalent. Can map party identifier to InstgAgtAcct if needed, but semantics differ."
+    },
+    {
+      "mt_tag": "53B",
+      "mt_field_name": "Sender's Correspondent - Location",
+      "mt_option": "B",
+      "mx_path": "CdtTrfTxInf/InstgAgtAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 53B party identifier can be mapped to InstgAgtAcct account identification. Location information (line 2) may be included as supplementary data.",
+      "notes": "Field 53B provides location rather than full name/address. Less common than 53A."
+    },
+    {
+      "mt_tag": "53D",
+      "mt_field_name": "Sender's Correspondent - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/InstgAgtAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 53D party identifier can be mapped to InstgAgtAcct account identification. Name and address information may be stored in supplementary data or omitted.",
+      "notes": "Field 53 is correspondent banking concept. pacs.009 uses different routing model. Mapping is lossy."
+    },
+    {
+      "mt_tag": "54A",
+      "mt_field_name": "Receiver's Correspondent - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/InstdAgtAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 54A indicates the account held by receiver's correspondent. Optional party identifier maps to account identification. BIC implies the institution but is not explicitly mapped in pacs.009.",
+      "notes": "Field 54 specifies receiver's correspondent for reimbursement. pacs.009 doesn't have direct equivalent. Semantics differ from InstdAgtAcct."
+    },
+    {
+      "mt_tag": "54B",
+      "mt_field_name": "Receiver's Correspondent - Location",
+      "mt_option": "B",
+      "mx_path": "CdtTrfTxInf/InstdAgtAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 54B party identifier can be mapped to InstdAgtAcct account identification. Location information may be included as supplementary data.",
+      "notes": "Field 54B provides location rather than full details. Less common than 54A."
+    },
+    {
+      "mt_tag": "54D",
+      "mt_field_name": "Receiver's Correspondent - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/InstdAgtAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "mt_to_mx",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 54D party identifier can be mapped to InstdAgtAcct account identification. Name and address information may be stored in supplementary data or omitted.",
+      "notes": "Field 54 is correspondent banking concept. Mapping to pacs.009 is approximate."
+    },
+    {
+      "mt_tag": "56A",
+      "mt_field_name": "Intermediary Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/IntrmyAgt1/FinInstnId/BICFI",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 56A BIC maps to Intermediary Agent 1 Financial Institution BIC. This is a bank in the payment chain between ordering and beneficiary institutions.",
+      "notes": "Intermediary banks are used in correspondent banking chains. pacs.009 supports IntrmyAgt1, IntrmyAgt2, IntrmyAgt3 for multiple intermediaries."
+    },
+    {
+      "mt_tag": "56A",
+      "mt_field_name": "Intermediary Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/IntrmyAgt1Acct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 56A optional party identifier (line 1, prefixed with /) maps to Intermediary Agent 1 Account Identification. This is the account at the intermediary used for routing.",
+      "notes": "Party identifier in field 56A typically specifies the account to be credited/debited at the intermediary. Remove leading slash."
+    },
+    {
+      "mt_tag": "56D",
+      "mt_field_name": "Intermediary Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/IntrmyAgt1/FinInstnId/Nm",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 56D name and address maps to Intermediary Agent name (first non-party-identifier line) and postal address (remaining lines).",
+      "truncation_rule": "MX FinInstnId/Nm max 140 chars. MT allows 4x35=140 chars.",
+      "notes": "Field 56D used when intermediary doesn't have BIC or is identified by name/address. Parse: optional party identifier line, then name, then address."
+    },
+    {
+      "mt_tag": "56D",
+      "mt_field_name": "Intermediary Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/IntrmyAgt1/FinInstnId/PstlAdr/AdrLine",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 56D address lines (after name) map to Intermediary Agent Postal Address AdrLine elements.",
+      "truncation_rule": "MX allows up to 7 AdrLine elements of 70 chars each. MT has 4 lines total of 35 chars each.",
+      "notes": "Parse 56D: skip party identifier line if present, use next line(s) for name, remaining lines for address."
+    },
+    {
+      "mt_tag": "57A",
+      "mt_field_name": "Account With Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 57A BIC maps to Creditor Agent Financial Institution BIC. This is the institution with which the beneficiary institution holds an account - typically the final destination in the payment chain.",
+      "notes": "Field 57 is critical in MT202 - it identifies where the funds should ultimately be credited. In institutional transfers, this is often the same as field 58 (beneficiary institution)."
+    },
+    {
+      "mt_tag": "57A",
+      "mt_field_name": "Account With Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/CdtrAgtAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 57A optional party identifier (line 1, prefixed with /) maps to Creditor Agent Account Identification. This specifies the account at the creditor agent to be credited.",
+      "notes": "Party identifier in field 57A typically specifies the account number. Remove leading slash. Check if IBAN format - if yes, use CdtrAgtAcct/Id/IBAN instead."
+    },
+    {
+      "mt_tag": "57B",
+      "mt_field_name": "Account With Institution - Location",
+      "mt_option": "B",
+      "mx_path": "CdtTrfTxInf/CdtrAgt/FinInstnId/Nm",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 57B location (line 2, 35 chars) maps to Creditor Agent name. Party identifier (optional line 1) maps to account if present.",
+      "notes": "Field 57B provides location information rather than full name/address. Less precise than 57D."
+    },
+    {
+      "mt_tag": "57D",
+      "mt_field_name": "Account With Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/CdtrAgt/FinInstnId/Nm",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 57D name and address maps to Creditor Agent name (first non-party-identifier line) and postal address (remaining lines).",
+      "truncation_rule": "MX FinInstnId/Nm max 140 chars. MT allows 4x35=140 chars.",
+      "notes": "Field 57D used when account-with institution doesn't have BIC. Parse: optional party identifier line, then name, then address."
+    },
+    {
+      "mt_tag": "57D",
+      "mt_field_name": "Account With Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/CdtrAgt/FinInstnId/PstlAdr/AdrLine",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 57D address lines (after name) map to Creditor Agent Postal Address AdrLine elements.",
+      "truncation_rule": "MX allows up to 7 AdrLine elements of 70 chars each. MT has 4 lines total of 35 chars each.",
+      "notes": "Parse 57D: skip party identifier line if present, use next line(s) for name, remaining lines for address."
+    },
+    {
+      "mt_tag": "58A",
+      "mt_field_name": "Beneficiary Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/Cdtr/Id/OrgId/AnyBIC",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 58A BIC maps to Creditor Organization Identification Any BIC. This is the final beneficiary financial institution receiving the funds.",
+      "notes": "Field 58 identifies the beneficiary institution (not a customer). In many MT202 messages, fields 57 and 58 may be the same institution."
+    },
+    {
+      "mt_tag": "58A",
+      "mt_field_name": "Beneficiary Institution - BIC",
+      "mt_option": "A",
+      "mx_path": "CdtTrfTxInf/CdtrAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 58A optional party identifier (line 1, prefixed with /) maps to Creditor Account Identification. This is the account to be credited at the beneficiary institution.",
+      "notes": "Party identifier in field 58A specifies the account. Remove leading slash. Check if IBAN format - if yes, use CdtrAcct/Id/IBAN instead."
+    },
+    {
+      "mt_tag": "58D",
+      "mt_field_name": "Beneficiary Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/Cdtr/Nm",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 58D name and address (up to 4 lines of 35 chars) maps to Creditor Name (first non-party-identifier line) and Creditor Postal Address (remaining lines).",
+      "truncation_rule": "MX Nm max 140 chars. MT allows 4x35=140 chars total for party identifier+name+address.",
+      "notes": "Field 58D used when beneficiary institution doesn't have BIC. Parse: optional party identifier line, then name line(s), then address line(s)."
+    },
+    {
+      "mt_tag": "58D",
+      "mt_field_name": "Beneficiary Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/Cdtr/PstlAdr/AdrLine",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 58D address lines (after name) map to Creditor Postal Address AdrLine elements.",
+      "truncation_rule": "MX allows up to 7 AdrLine elements of 70 chars each. MT has 4 lines total of 35 chars each.",
+      "notes": "Parse 58D: skip party identifier line if present, use next line(s) for name, remaining lines for address."
+    },
+    {
+      "mt_tag": "58D",
+      "mt_field_name": "Beneficiary Institution - Name & Address",
+      "mt_option": "D",
+      "mx_path": "CdtTrfTxInf/CdtrAcct/Id/Othr/Id",
+      "transform_type": "split",
+      "direction": "both",
+      "data_loss_risk": "none",
+      "transform_details": "MT202 field 58D optional party identifier (line 1 if starts with /) maps to Creditor Account Identification. Remove leading slash.",
+      "notes": "Check if account is IBAN format. If yes, use CdtrAcct/Id/IBAN instead of Othr/Id."
+    },
+    {
+      "mt_tag": "72",
+      "mt_field_name": "Sender to Receiver Information",
+      "mx_path": "CdtTrfTxInf/InstrForNxtAgt/InstrInf",
+      "transform_type": "direct",
+      "direction": "both",
+      "data_loss_risk": "possible",
+      "transform_details": "MT202 field 72 sender to receiver information (up to 6 lines of 35 chars, max 210 chars) maps to Instruction for Next Agent Instruction Information. Contains bank-to-bank instructions, often with structured codes like /INS/ for instructions or /ACC/ for account info.",
+      "truncation_rule": "MX InstrInf max 140 chars. MT allows 6x35=210 chars. Truncate if necessary, prioritizing structured codes (e.g., /ACC/, /INS/, /REF/).",
+      "notes": "Field 72 in MT202 often contains /INS/ codes for cover payment instructions, linking to the underlying MT103. Parse structured codes if present and map appropriately."
+    }
+  ],
+  "mt_only_fields": [
+    {
+      "mt_tag": "53A",
+      "mt_field_name": "Sender's Correspondent",
+      "reason": "Field 53 identifies the correspondent account for reimbursement in MT202 correspondent banking model. pacs.009 uses different routing model without explicit correspondent account field. Reimbursement is handled through settlement systems (IntrBkSttlmDt, SttlmAcct). Can be partially mapped to InstgAgtAcct but semantics differ significantly."
+    },
+    {
+      "mt_tag": "53B",
+      "mt_field_name": "Sender's Correspondent - Location",
+      "reason": "Same as 53A - correspondent banking concept doesn't map directly to pacs.009."
+    },
+    {
+      "mt_tag": "53D",
+      "mt_field_name": "Sender's Correspondent - Name & Address",
+      "reason": "Same as 53A - correspondent banking concept doesn't map directly to pacs.009."
+    },
+    {
+      "mt_tag": "54A",
+      "mt_field_name": "Receiver's Correspondent",
+      "reason": "Field 54 identifies the receiver's correspondent for reimbursement. pacs.009 doesn't have explicit receiver's correspondent field. Routing handled differently through IntrBkSttlmDt and settlement systems. Can be partially mapped to InstdAgtAcct but semantics differ."
+    },
+    {
+      "mt_tag": "54B",
+      "mt_field_name": "Receiver's Correspondent - Location",
+      "reason": "Same as 54A - receiver's correspondent concept doesn't map to pacs.009."
+    },
+    {
+      "mt_tag": "54D",
+      "mt_field_name": "Receiver's Correspondent - Name & Address",
+      "reason": "Same as 54A - receiver's correspondent concept doesn't map to pacs.009."
+    }
+  ],
+  "mx_only_fields": [
+    {
+      "mx_path": "GrpHdr/MsgId",
+      "mx_element_name": "Message Identification",
+      "default_strategy": "Generate unique identifier (UUID or timestamp-based) at translation time. MT202 field 20 could be reused but may not be unique across batches.",
+      "reason": "MT202 is single transaction message without group header concept. pacs.009 requires GrpHdr/MsgId for message identification at group level."
+    },
+    {
+      "mx_path": "GrpHdr/CreDtTm",
+      "mx_element_name": "Creation Date Time",
+      "default_strategy": "Use current timestamp at translation time. Optionally derive from MT202 field 13C (Time Indication) if present, combined with field 32A date.",
+      "reason": "MT202 doesn't have explicit message creation timestamp. Field 13C is optional and rarely used. pacs.009 requires CreDtTm."
+    },
+    {
+      "mx_path": "GrpHdr/NbOfTxs",
+      "mx_element_name": "Number of Transactions",
+      "default_strategy": "Set to '1' since MT202 is single transaction. For batch translation, count number of MT202 messages being converted.",
+      "reason": "MT202 is always single transaction. pacs.009 supports batch transactions, so NbOfTxs is mandatory to indicate count."
+    },
+    {
+      "mx_path": "GrpHdr/CtrlSum",
+      "mx_element_name": "Control Sum",
+      "default_strategy": "Use field 32A amount. For batch translation, sum all transaction amounts. Element is optional, can be omitted.",
+      "reason": "MT202 has no control sum concept (single transaction). pacs.009 CtrlSum is optional but recommended for batch validation."
+    },
+    {
+      "mx_path": "GrpHdr/InstgAgt/FinInstnId",
+      "mx_element_name": "Instructing Agent",
+      "default_strategy": "Use MT202 sender BIC from Block 1 (logical terminal address). Extract 8-char BIC from positions 5-16 of Block 1.",
+      "reason": "MT202 Block 1 contains sender identification but not in same format as pacs.009 GrpHdr. Need to extract from message envelope."
+    },
+    {
+      "mx_path": "GrpHdr/InstdAgt/FinInstnId",
+      "mx_element_name": "Instructed Agent",
+      "default_strategy": "Use MT202 receiver BIC from Block 2 (destination address for input messages). Extract from Block 2 Input format.",
+      "reason": "MT202 Block 2 contains receiver identification but not in same format as pacs.009 GrpHdr. Need to extract from message envelope."
+    },
+    {
+      "mx_path": "CdtTrfTxInf/PmtId/TxId",
+      "mx_element_name": "Transaction Identification",
+      "default_strategy": "Generate unique identifier or use MT202 field 20. TxId is optional, can be omitted if InstrId and EndToEndId are present.",
+      "reason": "MT202 doesn't distinguish between instruction ID, end-to-end ID, and transaction ID. pacs.009 has three separate identifiers in PmtId."
+    },
+    {
+      "mx_path": "CdtTrfTxInf/PmtTpInf/SvcLvl/Cd",
+      "mx_element_name": "Service Level Code",
+      "default_strategy": "Derive from context: if SWIFT gpi (Block 3 tag 121 present), use 'G001'. For cover payments, can use 'G002' (cover). Otherwise can be omitted.",
+      "reason": "MT202 doesn't explicitly specify service level. pacs.009 uses SvcLvl to indicate gpi, cover payment type, or other service levels. Must be inferred from context or message usage."
+    },
+    {
+      "mx_path": "CdtTrfTxInf/IntrBkSttlmDt",
+      "mx_element_name": "Interbank Settlement Date",
+      "default_strategy": "Use MT202 field 32A date component. This is the value date for interbank settlement.",
+      "reason": "MT202 field 32A contains value date which equals interbank settlement date in institutional transfers. Direct mapping is appropriate."
+    },
+    {
+      "mx_path": "CdtTrfTxInf/SttlmAcct/Id",
+      "mx_element_name": "Settlement Account",
+      "default_strategy": "Can be omitted or derived from institutional configuration. Not present in MT202.",
+      "reason": "MT202 doesn't specify settlement account explicitly. pacs.009 SttlmAcct indicates the account used for interbank settlement. Typically configured per institution or clearing system."
+    },
+    {
+      "mx_path": "CdtTrfTxInf/ChrgBr",
+      "mx_element_name": "Charge Bearer",
+      "default_strategy": "Default to 'SHAR' (shared charges) as most common for interbank transfers. MT202 has no charge bearer field.",
+      "reason": "MT202 does not include field 71A (Details of Charges) unlike MT103. Charges in institutional transfers are typically handled through separate agreements or messages. pacs.009 ChrgBr is often mandatory depending on scheme rules."
+    },
+    {
+      "mx_path": "CdtTrfTxInf/ChrgsInf",
+      "mx_element_name": "Charges Information",
+      "default_strategy": "Omit or derive from bilateral agreements. MT202 has no charges fields (71F/71G do not exist in MT202).",
+      "reason": "MT202 does not include sender's charges (71F) or receiver's charges (71G) unlike MT103. Charges in bank-to-bank transfers are handled separately. pacs.009 ChrgsInf is optional."
+    }
+  ],
+  "key_differences_from_mt103_pacs008": [
+    {
+      "difference": "No customer party fields",
+      "details": "MT202/pacs.009 are institution-to-institution transfers. MT202 has no fields 50 (ordering customer) or 59 (beneficiary customer). All parties are financial institutions identified by fields 52/58 (MT) or InstgAgt/Cdtr (MX)."
+    },
+    {
+      "difference": "Field 21 (Related Reference) is mandatory",
+      "details": "MT202 field 21 is mandatory and links to the related transaction (typically MT103 field 20 in cover payment scenarios). This field is absent in MT103. In pacs.009, this can map to EndToEndId to maintain traceability."
+    },
+    {
+      "difference": "No charge bearer or charges fields",
+      "details": "MT202 has no field 71A (Details of Charges), 71F (Sender's Charges), or 71G (Receiver's Charges). Charges in institutional transfers are handled through separate bilateral agreements. pacs.009 may require ChrgBr to be defaulted based on scheme rules."
+    },
+    {
+      "difference": "Correspondent banking fields",
+      "details": "MT202 retains correspondent banking fields (53/54) for sender's and receiver's correspondents. These map poorly to pacs.009 which uses a different routing model. Fields 53/54 represent older SWIFT reimbursement practices."
+    },
+    {
+      "difference": "Cover payment usage",
+      "details": "MT202 is commonly used as 'cover payment' backing an MT103 customer transfer. Field 21 references the MT103, and field 72 often contains /INS/ codes with cover payment instructions. pacs.009 can indicate cover through SvcLvl/Cd='G002' (cover) but structure differs."
+    },
+    {
+      "difference": "Simpler party structure",
+      "details": "MT202 has fewer optional fields and simpler party identification than MT103. Only financial institutions are parties, so no structured party formats like 50F/59F (field F option with numbered lines for date of birth, etc.)."
+    },
+    {
+      "difference": "Field 72 usage patterns",
+      "details": "MT202 field 72 (Sender to Receiver Information) is heavily used for structured bank-to-bank instructions, especially /INS/ codes for cover payments. More structured than MT103 field 72 which often contains free-text remittance info."
+    }
+  ]
+}
